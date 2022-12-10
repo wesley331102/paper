@@ -21,6 +21,7 @@ class SupervisedForecastTask(pl.LightningModule):
         **kwargs
     ):
         super(SupervisedForecastTask, self).__init__()
+        print('\n================torch.cuda.is_available()======================', torch.cuda.is_available(), '\n')
         self.save_hyperparameters()
         self.model = model
         # self.regressor = (
@@ -42,7 +43,7 @@ class SupervisedForecastTask(pl.LightningModule):
 
     def forward(self, x):
         # (batch_size, seq_len, num_nodes)
-        batch_size, _, num_nodes = x.size()
+        batch_size, _, num_nodes, feature_size = x.size()
         # (batch_size, num_nodes, hidden_dim)
         hidden = self.model(x)
         # modify

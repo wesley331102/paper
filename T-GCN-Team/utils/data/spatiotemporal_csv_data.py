@@ -3,7 +3,7 @@ import numpy as np
 import pytorch_lightning as pl
 from torch.utils.data.dataloader import DataLoader
 import utils.data.functions
-
+import torch.nn as nn
 
 class SpatioTemporalCSVDataModule(pl.LightningDataModule):
     def __init__(
@@ -68,3 +68,7 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
     @property
     def adj(self):
         return self._adj
+
+    @property
+    def feat(self):
+        return self._feat

@@ -23,7 +23,7 @@ def get_model(args, dm):
     if args.model_name == "GRU":
         model = models.GRU(input_dim=dm.adj.shape[0], hidden_dim=args.hidden_dim)
     if args.model_name == "TGCN":
-        model = models.TGCN(adj=dm.adj, hidden_dim=args.hidden_dim)
+        model = models.TGCN(adj=dm.adj, feat=dm.feat, hidden_dim=args.hidden_dim)
     return model
 
 
@@ -46,7 +46,11 @@ def get_callbacks(args):
 
 def main_supervised(args):
     dm = utils.data.SpatioTemporalCSVDataModule(
-        feat_path=os.path.join('data', 'team_list_pts.p'), y_path=os.path.join('data', 'team_list_y.p'), adj_path=os.path.join('data', 'team_adj.csv'), **vars(args)
+        # feat_path=os.path.join('data', 'team_list_pts.p'), 
+        feat_path=os.path.join('data', 'new_team_list.p'), 
+        y_path=os.path.join('data', 'team_list_y.p'), 
+        adj_path=os.path.join('data', 'team_adj.csv'), 
+        **vars(args)
     )
     model = get_model(args, dm)
     task = get_task(args, model, dm)

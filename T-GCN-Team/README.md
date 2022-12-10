@@ -35,5 +35,5 @@ Run `tensorboard --logdir lightning_logs/version_0` to monitor the training prog
 
 ```bash
 # Basketball
-python main.py --model_name TGCN --max_epochs 3000 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba --settings supervised
+python main.py --model_name TGCN --max_epochs 300 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba --settings supervised --gpus 1
 ```

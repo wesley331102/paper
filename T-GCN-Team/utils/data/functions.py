@@ -3,6 +3,9 @@ import pandas as pd
 import torch
 import pickle
 
+def data_transform(data):
+    return data
+
 def load_features(feat_path, dtype=np.float32):
     feat_df = pickle.load(open(feat_path, "rb"))
     feat = np.array(feat_df, dtype=dtype)
@@ -50,8 +53,13 @@ def generate_dataset(
     # if time_len is None:
     data_len = data.shape[0]
     if normalize:
-        max_val = np.max(data)
-        data = data / max_val
+        for i in range(data.shape[2]):
+            m = np.max(data[:, :, i])
+            data[:, :, i] = data[:, :, i] / float(m)
+        # max_val = np.max(data)
+        # print(max_val)
+        # data = data / max_val
+
     train_size = int(data_len * split_ratio)
     train_data = data[:train_size]
     test_data = data[train_size:data_len]
@@ -76,7 +84,7 @@ def generate_torch_datasets(
 ):
     train_X, train_Y, test_X, test_Y = generate_dataset(
         data,
-        y,
+        y, 
         split_ratio=split_ratio,
         normalize=normalize,
     )
