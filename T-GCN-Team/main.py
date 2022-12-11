@@ -23,7 +23,7 @@ def get_model(args, dm):
     if args.model_name == "GRU":
         model = models.GRU(input_dim=dm.adj.shape[0], hidden_dim=args.hidden_dim)
     if args.model_name == "TGCN":
-        model = models.TGCN(adj=dm.adj, feat=dm.feat, hidden_dim=args.hidden_dim)
+        model = models.TGCN(adj=dm.adj, feat=dm.feat, hidden_dim=args.hidden_dim, linear_transfomation=True)
     return model
 
 

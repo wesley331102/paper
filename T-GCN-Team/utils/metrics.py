@@ -32,3 +32,21 @@ def get_mean(m, y):
                 num += 1
     return s / num
 
+def get_accuracy(inputs, targets, model):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    game = 0.0
+    right = 0.0
+    for i in range(leng):
+        inp = inputs[i]
+        t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
+        for j in range(t.shape[0]):
+            if t[j][0] != 0 and t[j][1] != [0]:
+                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])]), 0)
+                real_y = model.regressor(com)
+                if t[j][2]*real_y > 0:
+                    right += 1
+                game += 1
+
+    right = right / game
+    return right

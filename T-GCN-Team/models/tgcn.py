@@ -2,6 +2,7 @@ import argparse
 import torch
 import torch.nn as nn
 from utils.graph_conv import calculate_laplacian_with_self_loop
+import threading
 
 
 class TGCNGraphConvolution(nn.Module):
@@ -104,23 +105,38 @@ class TGCNCell(nn.Module):
 
 
 class TGCN(nn.Module):
-    def __init__(self, adj, feat, hidden_dim: int, **kwargs):
+    def __init__(self, adj, feat, hidden_dim: int, linear_transfomation: bool, **kwargs):
         super(TGCN, self).__init__()
         self._input_dim = adj.shape[0] # num_nodes for prediction(207)
         self._hidden_dim = hidden_dim # set 100
+        self._linear_transfomation = linear_transfomation
         self.register_buffer("adj", torch.FloatTensor(adj))
 
-        # if no linear transformation
-        # self._feature_dim = feat.shape[2]
-        # if linear transformation
-        self._aspect_dim = 10
-        self.linear_transformation_offense = nn.Linear(5, self._aspect_dim)
-        self.linear_transformation_defend = nn.Linear(3, self._aspect_dim)
-        self.linear_transformation_error = nn.Linear(2, self._aspect_dim)
-        self.linear_transformation_influence = nn.Linear(2, self._aspect_dim)
-        self._feature_dim = 4*10
+        if linear_transfomation:
+            self._aspect_dim = 10
+            self.linear_transformation_offense = nn.Linear(5, self._aspect_dim)
+            self.linear_transformation_defend = nn.Linear(3, self._aspect_dim)
+            self.linear_transformation_error = nn.Linear(2, self._aspect_dim)
+            self.linear_transformation_influence = nn.Linear(2, self._aspect_dim)
+            self._feature_dim = 4*10
+        else:
+            self._feature_dim = feat.shape[2]
 
         self.tgcn_cell = TGCNCell(self.adj, self._input_dim, self._feature_dim, self._hidden_dim)
+
+    # multi thread
+    def linear_transformation(self, data, new_inputs, i):
+        x = data[i]
+        s, n, f = x.shape
+        n_inputs = torch.zeros(s, n, self._feature_dim).type_as(x)
+        for j in range(s):
+            for k in range(n):
+                offense_input = self.linear_transformation_offense(torch.Tensor([x[j][k][2], x[j][k][5], x[j][k][8], x[j][k][9], x[j][k][12]]))
+                defend_input = self.linear_transformation_defend(torch.Tensor([x[j][k][10], x[j][k][14], x[j][k][15]]))
+                error_input = self.linear_transformation_error(torch.Tensor([x[j][k][13], x[j][k][17]]))
+                influence_input = self.linear_transformation_influence(torch.Tensor([x[j][k][19], x[j][k][20]]))
+                n_inputs[j][k] = torch.cat((offense_input, defend_input, error_input, influence_input))
+        new_inputs[i] = n_inputs
 
     def forward(self, inputs):
         batch_size, seq_len, num_nodes, feature_size = inputs.shape
@@ -130,22 +146,32 @@ class TGCN(nn.Module):
         )
         
         # linear transforamtion
-        new_inputs = torch.zeros(batch_size, seq_len, num_nodes, self._feature_dim).type_as(inputs)
-        for i in range(batch_size):
-            for j in range(seq_len):
-                for k in range(num_nodes):
-                    offense_input = self.linear_transformation_offense(torch.Tensor([inputs[i][j][k][2], inputs[i][j][k][5], inputs[i][j][k][8], inputs[i][j][k][9], inputs[i][j][k][12]]))
-                    defend_input = self.linear_transformation_defend(torch.Tensor([inputs[i][j][k][10], inputs[i][j][k][14], inputs[i][j][k][15]]))
-                    error_input = self.linear_transformation_error(torch.Tensor([inputs[i][j][k][13], inputs[i][j][k][17]]))
-                    influence_input = self.linear_transformation_influence(torch.Tensor([inputs[i][j][k][19], inputs[i][j][k][20]]))
-                    new_inputs[i][j][k] = torch.cat((offense_input, defend_input, error_input, influence_input))
+        if self._linear_transfomation:
+            new_inputs = torch.zeros(batch_size, seq_len, num_nodes, self._feature_dim).type_as(inputs)
+
+            # threads = [None] * batch_size
+            # for i in range(batch_size):
+            #     threads[i] = threading.Thread(target=self.linear_transformation, args = (inputs, new_inputs, i))
+            #     threads[i].start()
+            # for i in range(batch_size):
+            #     threads[i].join()
+
+            for i in range(batch_size):
+                for j in range(seq_len):
+                    for k in range(num_nodes):
+                        offense_input = self.linear_transformation_offense(torch.Tensor([inputs[i][j][k][2], inputs[i][j][k][5], inputs[i][j][k][8], inputs[i][j][k][9], inputs[i][j][k][12]]))
+                        defend_input = self.linear_transformation_defend(torch.Tensor([inputs[i][j][k][10], inputs[i][j][k][14], inputs[i][j][k][15]]))
+                        error_input = self.linear_transformation_error(torch.Tensor([inputs[i][j][k][13], inputs[i][j][k][17]]))
+                        influence_input = self.linear_transformation_influence(torch.Tensor([inputs[i][j][k][19], inputs[i][j][k][20]]))
+                        new_inputs[i][j][k] = torch.cat((offense_input, defend_input, error_input, influence_input))
 
         output = None
         for i in range(seq_len):
-            # if no linear transformation
-            # output, hidden_state = self.tgcn_cell(inputs[:, i, :, :], hidden_state)
             # if linear transformation
-            output, hidden_state = self.tgcn_cell(new_inputs[:, i, :, :], hidden_state)
+            if self._linear_transfomation:
+                output, hidden_state = self.tgcn_cell(new_inputs[:, i, :, :], hidden_state)
+            else:
+                output, hidden_state = self.tgcn_cell(inputs[:, i, :, :], hidden_state)
             output = output.reshape((batch_size, num_nodes, self._hidden_dim))
         return output
 
