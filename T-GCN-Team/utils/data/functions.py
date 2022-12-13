@@ -6,13 +6,18 @@ import pickle
 def data_transform(data):
     return data
 
-def load_features(feat_path, dtype=np.float32):
+def load_features(feat_path, p_feature_path, dtype=np.float32):
     feat_df = pickle.load(open(feat_path, "rb"))
-    feat = np.array(feat_df, dtype=dtype)
+    feat_p_df = pickle.load(open(p_feature_path, "rb"))
+    feat = np.array(np.concatenate((feat_df, feat_p_df), axis=1), dtype=dtype)
     return feat
     # feat_df = pd.read_csv(feat_path)
     # feat = np.array(feat_df, dtype=dtype)
-    # return feat
+    # return 
+    
+def load_team_player_dict(path):
+    res = pickle.load(open(path, "rb"))
+    return res
 
 def load_targets(target_path):
     target_df = pickle.load(open(target_path, "rb"))
@@ -25,6 +30,14 @@ def load_adjacency_matrix(adj_path, dtype=np.float32):
     adj_df = pd.read_csv(adj_path, header=None, skiprows=1, index_col=0)
     adj = np.array(adj_df, dtype=dtype)
     return adj
+
+def load_adjacency_matrices(adjs_path, dtype=np.float32):
+    adjs = []
+    for adj_path in adjs_path:
+        adj_df = pd.read_csv(adj_path, header=None, skiprows=1, index_col=0)
+        adj = np.array(adj_df, dtype=dtype)
+        adjs.append(adj)
+    return adjs
 
 def dict_to_list(data):
     result = list()

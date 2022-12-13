@@ -23,7 +23,7 @@ def get_model(args, dm):
     if args.model_name == "GRU":
         model = models.GRU(input_dim=dm.adj.shape[0], hidden_dim=args.hidden_dim)
     if args.model_name == "TGCN":
-        model = models.TGCN(adj=dm.adj, feat=dm.feat, hidden_dim=args.hidden_dim, linear_transfomation=True)
+        model = models.TGCN(adj=dm.adj, adjs=dm.adjs, feat=dm.feat, hidden_dim=args.hidden_dim, linear_transfomation=False)
     return model
 
 
@@ -48,8 +48,11 @@ def main_supervised(args):
     dm = utils.data.SpatioTemporalCSVDataModule(
         # feat_path=os.path.join('data', 'team_list_pts.p'), 
         feat_path=os.path.join('data', 'new_team_list.p'), 
+        p_feat_path=os.path.join('data', 'new_player_list.p'),
+        player_team_path=os.path.join('data', 'player_team_dict.p'),
         y_path=os.path.join('data', 'team_list_y.p'), 
         adj_path=os.path.join('data', 'team_adj.csv'), 
+        adjs_path=[os.path.join('data', 'pass_adj.csv'), os.path.join('data', 'ast_adj.csv')], 
         **vars(args)
     )
     model = get_model(args, dm)
