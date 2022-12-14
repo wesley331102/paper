@@ -31,14 +31,6 @@ def load_adjacency_matrix(adj_path, dtype=np.float32):
     adj = np.array(adj_df, dtype=dtype)
     return adj
 
-def load_adjacency_matrices(adjs_path, dtype=np.float32):
-    adjs = []
-    for adj_path in adjs_path:
-        adj_df = pd.read_csv(adj_path, header=None, skiprows=1, index_col=0)
-        adj = np.array(adj_df, dtype=dtype)
-        adjs.append(adj)
-    return adjs
-
 def dict_to_list(data):
     result = list()
     for data_dict in data:

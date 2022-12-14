@@ -14,7 +14,6 @@ class SupervisedForecastTask(pl.LightningModule):
         model: nn.Module,
         regressor="linear",
         loss="mse",
-        pre_len: int = 3,
         learning_rate: float = 1e-3,
         weight_decay: float = 1.5e-3,
         feat_max_val: float = 1.0,

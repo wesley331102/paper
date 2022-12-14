@@ -6,15 +6,8 @@ import models
 import tasks
 import utils.callbacks
 import utils.data
-import utils.email
 import utils.logging
 import os
-
-DATA_PATHS = {
-    "shenzhen": {"feat": "data/sz_speed.csv", "adj": "data/sz_adj.csv"},
-    "losloop": {"feat": "data/los_speed.csv", "adj": "data/los_adj.csv"},
-}
-
 
 def get_model(args, dm):
     model = None
@@ -22,17 +15,15 @@ def get_model(args, dm):
         model = models.GCN(adj=dm.adj, input_dim=args.seq_len, output_dim=args.hidden_dim)
     if args.model_name == "GRU":
         model = models.GRU(input_dim=dm.adj.shape[0], hidden_dim=args.hidden_dim)
-    if args.model_name == "TGCN":
-        model = models.TGCN(adj=dm.adj, adjs=dm.adjs, feat=dm.feat, hidden_dim=args.hidden_dim, linear_transfomation=False)
+    if args.model_name == "BGCN":
+        model = models.BGCN(adj=dm.adj, adj_1=dm.adj_1, adj_2=dm.adj_2, feat=dm.feat, hidden_dim=args.hidden_dim, linear_transformation=False)
     return model
-
 
 def get_task(args, model, dm):
     task = getattr(tasks, args.settings.capitalize() + "ForecastTask")(
         model=model, feat_max_val=dm.feat_max_val, **vars(args)
     )
     return task
-
 
 def get_callbacks(args):
     checkpoint_callback = pl.callbacks.ModelCheckpoint(monitor="train_loss")
@@ -46,13 +37,13 @@ def get_callbacks(args):
 
 def main_supervised(args):
     dm = utils.data.SpatioTemporalCSVDataModule(
-        # feat_path=os.path.join('data', 'team_list_pts.p'), 
         feat_path=os.path.join('data', 'new_team_list.p'), 
         p_feat_path=os.path.join('data', 'new_player_list.p'),
         player_team_path=os.path.join('data', 'player_team_dict.p'),
         y_path=os.path.join('data', 'team_list_y.p'), 
         adj_path=os.path.join('data', 'team_adj.csv'), 
-        adjs_path=[os.path.join('data', 'pass_adj.csv'), os.path.join('data', 'ast_adj.csv')], 
+        adj_1_path=os.path.join('data', 'pass_adj.csv'),
+        adj_2_path=os.path.join('data', 'ast_adj.csv'),
         **vars(args)
     )
     model = get_model(args, dm)
@@ -75,14 +66,12 @@ if __name__ == "__main__":
     parser = pl.Trainer.add_argparse_args(parser)
 
     parser.add_argument(
-        "--data", type=str, help="The name of the dataset", choices=("shenzhen", "losloop"), default="losloop"
-    )
-    parser.add_argument(
         "--model_name",
         type=str,
-        help="The name of the model for spatiotemporal prediction",
-        choices=("GCN", "GRU", "TGCN"),
-        default="GCN",
+        help="The name of the model for nba score difference prediction",
+        # choices=("GCN", "GRU", "BGCN"),
+        choices=("BGCN"),
+        default="BGCN",
     )
     parser.add_argument(
         "--settings",
@@ -92,7 +81,6 @@ if __name__ == "__main__":
         default="supervised",
     )
     parser.add_argument("--log_path", type=str, default=None, help="Path to the output console log file")
-    parser.add_argument("--send_email", "--email", action="store_true", help="Send email when finished")
 
     temp_args, _ = parser.parse_known_args()
 
@@ -109,12 +97,4 @@ if __name__ == "__main__":
         results = main(args)
     except:  # noqa: E722
         traceback.print_exc()
-        if args.send_email:
-            tb = traceback.format_exc()
-            subject = "[Email Bot][❌] " + "-".join([args.settings, args.model_name, args.data])
-            utils.email.send_email(tb, subject)
         exit(-1)
-
-    if args.send_email:
-        subject = "[Email Bot][✅] " + "-".join([args.settings, args.model_name, args.data])
-        utils.email.send_experiment_results_email(args, results, subject=subject)
