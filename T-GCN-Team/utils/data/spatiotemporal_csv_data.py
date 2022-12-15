@@ -36,10 +36,9 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         self.split_ratio = split_ratio
         self.normalize = normalize
         self._feat = utils.data.functions.load_features(self._feat_path, self._p_feat_path)
-        # self._p_feat_path = p_feat_path
         self._player_team_dict = utils.data.functions.load_team_player_dict(self._player_team_path)
         self._y = utils.data.functions.load_targets(self._y_path)
-        self._feat_max_val = np.max(self._feat)
+        self._y_max = utils.data.functions.load_y_max(self._y_path)
         self._adj = utils.data.functions.load_adjacency_matrix(self._adj_path)
         self._adj_1 = utils.data.functions.load_adjacency_matrix(self._adj_1_path)
         self._adj_2 = utils.data.functions.load_adjacency_matrix(self._adj_2_path)
@@ -73,8 +72,8 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         return DataLoader(self.val_dataset, batch_size=len(self.val_dataset))
 
     @property
-    def feat_max_val(self):
-        return self._feat_max_val
+    def y_max(self):
+        return self._y_max
 
     @property
     def adj(self):

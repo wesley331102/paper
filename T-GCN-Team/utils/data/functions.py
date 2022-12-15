@@ -26,6 +26,15 @@ def load_targets(target_path):
     # feat = np.array(feat_df, dtype=dtype)
     # return feat
 
+def load_y_max(target_path):
+    max_y = -1.00
+    target_df = pickle.load(open(target_path, "rb"))
+    for date in target_df:
+        for key in date.keys():
+            if np.abs(date[key]) > max_y:
+                max_y = np.abs(date[key])
+    return max_y
+
 def load_adjacency_matrix(adj_path, dtype=np.float32):
     adj_df = pd.read_csv(adj_path, header=None, skiprows=1, index_col=0)
     adj = np.array(adj_df, dtype=dtype)

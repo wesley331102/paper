@@ -74,8 +74,10 @@ class SupervisedForecastTask(pl.LightningModule):
             return F.mse_loss(inputs, targets)
         if self._loss == "mse_with_regularizer":
             return utils.losses.mse_with_regularizer_loss(inputs, targets, self)
-        if self._loss == 'nba':
+        if self._loss == 'nba_mse':
             return utils.losses.nba_mse_with_regularizer_loss(inputs, targets, self)
+        if self._loss == 'nba_rmse':
+            return utils.losses.nba_rmse_with_regularizer_loss(inputs, targets, self)
         if self._loss == 'nba_ce':
             return utils.losses.nba_cross_entropy_loss(inputs, targets, self)
             

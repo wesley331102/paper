@@ -16,5 +16,5 @@ You can also adjust the `--seq_len` parameters.
 
 ```bash
 # Basketball
-python main.py --model_name BGCN --max_epochs 150 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba --settings supervised
+python main.py --model_name BGCN --max_epochs 150 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba_rmse --settings supervised
 ```
