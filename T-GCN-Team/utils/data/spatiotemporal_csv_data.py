@@ -17,7 +17,7 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         adj_2_path: str,
         batch_size: int = 64,
         seq_len: int = 12,
-        pre_len: int = 3,
+        pre_len: int = 1,
         split_ratio: float = 0.8,
         normalize: bool = True,
         **kwargs
@@ -49,7 +49,6 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--batch_size", type=int, default=32)
         parser.add_argument("--seq_len", type=int, default=12)
-        parser.add_argument("--pre_len", type=int, default=3)
         parser.add_argument("--split_ratio", type=float, default=0.8)
         parser.add_argument("--normalize", type=bool, default=True)
         return parser

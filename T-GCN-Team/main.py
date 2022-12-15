@@ -16,7 +16,7 @@ def get_model(args, dm):
     if args.model_name == "GRU":
         model = models.GRU(input_dim=dm.adj.shape[0], hidden_dim=args.hidden_dim)
     if args.model_name == "BGCN":
-        model = models.BGCN(adj=dm.adj, adj_1=dm.adj_1, adj_2=dm.adj_2, feat=dm.feat, hidden_dim=args.hidden_dim, linear_transformation=False)
+        model = models.BGCN(adj=dm.adj, adj_1=dm.adj_1, adj_2=dm.adj_2, feat=dm.feat, hidden_dim=args.hidden_dim, linear_transformation=True, applying_player=False)
     return model
 
 def get_task(args, model, dm):

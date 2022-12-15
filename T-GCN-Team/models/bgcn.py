@@ -167,20 +167,24 @@ class RelationalGraphConvLayer(nn.Module):
         return outputs
 
 class BGCNCell(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, input_dim_t: int, input_dim_p: int, feature_dim: int, hidden_dim: int):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, input_dim_t: int, input_dim_p: int, feature_dim: int, hidden_dim: int, applying_player: bool):
         super(BGCNCell, self).__init__()
+        # applying RGCN
+        self._applying_player = applying_player
         # num of nodes for team
         self._input_dim_t = input_dim_t
         # num of nodes for player
-        self._input_dim_p = input_dim_p
+        if self._applying_player:
+            self._input_dim_p = input_dim_p
         # feature dimension
         self._feature_dim = feature_dim
         # hidden dimension
         self._hidden_dim = hidden_dim # set 100
         # adjacency matrices
         self.register_buffer("adj", torch.FloatTensor(adj))
-        self.register_buffer("adj_1", torch.FloatTensor(adj_1))
-        self.register_buffer("adj_2", torch.FloatTensor(adj_2))
+        if self._applying_player:
+            self.register_buffer("adj_1", torch.FloatTensor(adj_1))
+            self.register_buffer("adj_2", torch.FloatTensor(adj_2))
         # GCN 1
         self.graph_conv1 = GraphConvolutionLayer(
             self.adj, self._feature_dim, self._hidden_dim, self._hidden_dim*2, bias=1.0
@@ -189,24 +193,31 @@ class BGCNCell(nn.Module):
         self.graph_conv2 = GraphConvolutionLayer(
             self.adj, self._feature_dim, self._hidden_dim, self._hidden_dim
         )
-        # RGCN 1
-        self.r_graph_conv1 = RelationalGraphConvLayer(
-            self.adj_1, self.adj_2, self._feature_dim, self._hidden_dim, self._hidden_dim*2, bias=1.0
-        )
-        # RGCN 2
-        self.r_graph_conv2 = RelationalGraphConvLayer(
-            self.adj_1, self.adj_2, self._feature_dim, self._hidden_dim, self._hidden_dim
-        )
+        if self._applying_player:
+            # RGCN 1
+            self.r_graph_conv1 = RelationalGraphConvLayer(
+                self.adj_1, self.adj_2, self._feature_dim, self._hidden_dim, self._hidden_dim*2, bias=1.0
+            )
+            # RGCN 2
+            self.r_graph_conv2 = RelationalGraphConvLayer(
+                self.adj_1, self.adj_2, self._feature_dim, self._hidden_dim, self._hidden_dim
+            )
 
     def forward(self, inputs, hidden_state):
-        # batch size * num of team nodes * feature dimension
-        team_inputs = inputs[:, :self._input_dim_t, :]
-        # batch size * num of player nodes * feature dimension
-        player_inputs = inputs[:, self._input_dim_t:, :]
-        # batch size * (num of team nodes * hidden state dimension)
-        team_hidden_state = hidden_state[:, :self._input_dim_t*self._hidden_dim]
-        # batch size * (num of player nodes * hidden state dimension)
-        player_hidden_state = hidden_state[:, self._input_dim_t*self._hidden_dim:]
+        if self._applying_player:
+            # batch size * num of team nodes * feature dimension
+            team_inputs = inputs[:, :self._input_dim_t, :]
+            # batch size * num of player nodes * feature dimension
+            player_inputs = inputs[:, self._input_dim_t:, :]
+            # batch size * (num of team nodes * hidden state dimension)
+            team_hidden_state = hidden_state[:, :self._input_dim_t*self._hidden_dim]
+            # batch size * (num of player nodes * hidden state dimension)
+            player_hidden_state = hidden_state[:, self._input_dim_t*self._hidden_dim:]
+        else:
+            # batch size * num of team nodes * feature dimension
+            team_inputs = inputs
+            # batch size * (num of team nodes * hidden state dimension)
+            team_hidden_state = hidden_state
 
         # gcn
         # [r, u] = sigmoid(A[x, h]W + b)
@@ -222,22 +233,27 @@ class BGCNCell(nn.Module):
         # h (batch size, (num of team nodes * hidden state dimension))
         new_hidden_state_t = u_t * team_hidden_state + (1.0 - u_t) * c_t
 
-        # rgcn
-        # [r, u] = sigmoid(A[x, h]W + b)
-        # batch size * (num of player nodes * (2 * hidden state dimension))
-        concatenation_p = torch.sigmoid(self.r_graph_conv1(player_inputs, player_hidden_state))
-        # r (batch size * (num of player nodes * hidden state dimension))
-        # u (batch size * (num of player nodes * hidden state dimension))
-        r_p, u_p = torch.chunk(concatenation_p, chunks=2, dim=1)
-        # c = tanh(A[x, (r * h)W + b])
-        # c (batch size * (num of player nodes * hidden state dimension))
-        c_p = torch.tanh(self.r_graph_conv2(player_inputs, r_p * player_hidden_state))
-        # h := u * h + (1 - u) * c
-        # h (batch size, (num of player nodes * hidden state dimension))
-        new_hidden_state_p = u_p * player_hidden_state + (1.0 - u_p) * c_p
+        if self._applying_player:
+            # rgcn
+            # [r, u] = sigmoid(A[x, h]W + b)
+            # batch size * (num of player nodes * (2 * hidden state dimension))
+            concatenation_p = torch.sigmoid(self.r_graph_conv1(player_inputs, player_hidden_state))
+            # r (batch size * (num of player nodes * hidden state dimension))
+            # u (batch size * (num of player nodes * hidden state dimension))
+            r_p, u_p = torch.chunk(concatenation_p, chunks=2, dim=1)
+            # c = tanh(A[x, (r * h)W + b])
+            # c (batch size * (num of player nodes * hidden state dimension))
+            c_p = torch.tanh(self.r_graph_conv2(player_inputs, r_p * player_hidden_state))
+            # h := u * h + (1 - u) * c
+            # h (batch size, (num of player nodes * hidden state dimension))
+            new_hidden_state_p = u_p * player_hidden_state + (1.0 - u_p) * c_p
         
-        # batch size, (num of nodes * hidden state dimension)
-        new_hidden_state = torch.cat((new_hidden_state_t, new_hidden_state_p), 1)
+        if self._applying_player:
+            # batch size, (num of nodes * hidden state dimension)
+            new_hidden_state = torch.cat((new_hidden_state_t, new_hidden_state_p), 1)
+        else:
+            # batch size, (num of nodes * hidden state dimension)
+            new_hidden_state = new_hidden_state_t
         return new_hidden_state, new_hidden_state
 
     @property
@@ -246,8 +262,10 @@ class BGCNCell(nn.Module):
 
 
 class BGCN(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, hidden_dim: int, linear_transformation: bool, **kwargs):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, hidden_dim: int, linear_transformation: bool, applying_player: bool, **kwargs):
         super(BGCN, self).__init__()
+        # applying RGCN
+        self._applying_player = applying_player
         # num of nodes for team
         self._input_dim_t = adj.shape[0]
         # num of nodes for player
@@ -263,7 +281,7 @@ class BGCN(nn.Module):
 
         # feature dimension
         if self._linear_transformation:
-            self._aspect_dim = 8
+            self._aspect_dim = 16
             self.linear_transformation_offense = nn.Linear(5, self._aspect_dim)
             self.linear_transformation_defend = nn.Linear(3, self._aspect_dim)
             self.linear_transformation_error = nn.Linear(2, self._aspect_dim)
@@ -273,67 +291,61 @@ class BGCN(nn.Module):
             self._feature_dim = feat.shape[2]
 
         # BGCN cell
-        self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self._input_dim_t, self._input_dim_p, self._feature_dim, self._hidden_dim)
+        self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self._input_dim_t, self._input_dim_p, self._feature_dim, self._hidden_dim, self._applying_player)
 
-    # multi thread function for linear transforamtion
-    # def linear_transformation(self, data, new_inputs, i):
-    #     x = data[i]
-    #     s, n, f = x.shape
-    #     n_inputs = torch.zeros(s, n, self._feature_dim).type_as(x)
-    #     for j in range(s):
-    #         for k in range(n):
-    #             offense_input = self.linear_transformation_offense(torch.Tensor([x[j][k][2], x[j][k][5], x[j][k][8], x[j][k][9], x[j][k][12]]))
-    #             defend_input = self.linear_transformation_defend(torch.Tensor([x[j][k][10], x[j][k][14], x[j][k][15]]))
-    #             error_input = self.linear_transformation_error(torch.Tensor([x[j][k][13], x[j][k][17]]))
-    #             influence_input = self.linear_transformation_influence(torch.Tensor([x[j][k][19], x[j][k][20]]))
-    #             n_inputs[j][k] = torch.cat((offense_input, defend_input, error_input, influence_input))
-    #     new_inputs[i] = n_inputs
+    def mask_aspect(self, feature_dim, weight, feature_index):
+        # aspect feature dim * aspect dim
+        aspect_weight = weight.transpose(0, 1)
+        # origin feature dim * aspect dim
+        mask_vector = torch.zeros(feature_dim, self._aspect_dim)
+        weight_index = 0
+        for i in feature_index:
+            mask_vector[i] = aspect_weight[weight_index]
+            weight_index += 1
+        return mask_vector
 
     def forward(self, inputs):
         # batch size * seq length * num of nodes * feature dimension
-        batch_dim, seq_dim, input_dim, feature_dim_ = inputs.shape
+        batch_dim, seq_dim, input_dim, feature_dim = inputs.shape
         # num of nodes = num of team nodes + num of player nodes
         assert input_dim == self._input_dim_t + self._input_dim_p
         # batch size * (num of nodes * hidden state dimension)
-        hidden_state = torch.zeros(batch_dim, input_dim * self._hidden_dim).type_as(
-            inputs
-        )
+        if self._applying_player:
+            hidden_state = torch.zeros(batch_dim, input_dim * self._hidden_dim).type_as(
+                inputs
+            )
+        else:
+            hidden_state = torch.zeros(batch_dim, self._input_dim_t * self._hidden_dim).type_as(
+                inputs
+            )
         
         # initial input if using linear transformation
         new_inputs = None
+        new_input_dim = input_dim if self._applying_player else self._input_dim_t
+
         # linear transforamtion
         if self._linear_transformation:
+            # origin feature dimension * aspect dimension
+            offense_weight = self.mask_aspect(feature_dim, self.linear_transformation_offense.weight, [2, 5, 8, 9, 12])
+            defend_weight = self.mask_aspect(feature_dim, self.linear_transformation_defend.weight, [10, 14, 15])
+            error_weight = self.mask_aspect(feature_dim, self.linear_transformation_error.weight, [13, 17])
+            influence_weight = self.mask_aspect(feature_dim, self.linear_transformation_influence.weight, [19, 20])
+            # origin feature dimension * feature dimension
+            aspect_weight = torch.cat((offense_weight, defend_weight, error_weight, influence_weight), dim=1)
+            # feature dimension
+            aspect_bias = torch.cat((self.linear_transformation_offense.bias, self.linear_transformation_defend.bias, self.linear_transformation_error.bias, self.linear_transformation_influence.bias), dim=0)
             # batch size * seq length * num of nodes * feature dimension
-            new_inputs = torch.zeros(batch_dim, seq_dim, input_dim, self._feature_dim).type_as(inputs)
-
-            # multi thread
-            # threads = [None] * batch_size
-            # for i in range(batch_size):
-            #     threads[i] = threading.Thread(target=self.linear_transformation, args = (inputs, new_inputs, i))
-            #     threads[i].start()
-            # for i in range(batch_size):
-            #     threads[i].join()
-
-            for i in range(batch_dim):
-                for j in range(seq_dim):
-                    for k in range(input_dim):
-                        # select feature of each aspect
-                        offense_input = self.linear_transformation_offense(torch.Tensor([inputs[i][j][k][2], inputs[i][j][k][5], inputs[i][j][k][8], inputs[i][j][k][9], inputs[i][j][k][12]]))
-                        defend_input = self.linear_transformation_defend(torch.Tensor([inputs[i][j][k][10], inputs[i][j][k][14], inputs[i][j][k][15]]))
-                        error_input = self.linear_transformation_error(torch.Tensor([inputs[i][j][k][13], inputs[i][j][k][17]]))
-                        influence_input = self.linear_transformation_influence(torch.Tensor([inputs[i][j][k][19], inputs[i][j][k][20]]))
-                        new_inputs[i][j][k] = torch.cat((offense_input, defend_input, error_input, influence_input))
+            new_inputs = inputs @ aspect_weight + aspect_bias
+        else:
+             # batch size * seq length * num of nodes * feature dimension
+            new_inputs = inputs[:, :, :new_input_dim, :]
 
         # initial output
         output = None
         for i in range(seq_dim):
-            # linear transformation
-            if self._linear_transformation:
-                output, hidden_state = self.tgcn_cell(new_inputs[:, i, :, :], hidden_state)
-            else:
-                output, hidden_state = self.tgcn_cell(inputs[:, i, :, :], hidden_state)
+            output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state)
             # batch size * num of nodes * hidden dimension
-            output = output.reshape((batch_dim, input_dim, self._hidden_dim))
+            output = output.reshape((batch_dim, new_input_dim, self._hidden_dim))
         return output
 
     @staticmethod
