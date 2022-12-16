@@ -1,9 +1,12 @@
 import argparse
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from utils.graph_conv import calculate_laplacian_with_self_loop
+from utils.dict_processing import dict_processing
 import threading
 import numpy as np
+from typing import Optional
 
 class GraphConvolutionLayer(nn.Module):
     def __init__(self, adj: np.ndarray, feature_dim: int, input_dim: int, output_dim: int, bias: float = 0.0):
@@ -166,8 +169,54 @@ class RelationalGraphConvLayer(nn.Module):
         outputs = outputs.reshape((batch_dim, num_nodes * self._output_dim))
         return outputs
 
+class ParallelCoAttentionLayer(nn.Module):
+    def __init__(self, hidden_dim: int, co_attention_dim: int, src_length_masking: bool = True):
+        super(ParallelCoAttentionLayer, self).__init__()
+        # hidden dimension
+        self._hidden_dim = hidden_dim
+        # co-attention dimension
+        self._co_attention_dim = co_attention_dim
+        # appying source length masking
+        self._src_length_masking = src_length_masking
+        # weight (hidden dimension * hidden dimension)
+        self.w_b = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
+        # weight (co-attention dimension * hidden dimension)
+        self.w_t = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._hidden_dim))
+        # weight (co-attention dimension * hidden dimension)
+        self.w_p = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._hidden_dim))
+        # weight (co-attention dimension * 1)
+        self.w_ht = nn.Parameter(torch.FloatTensor(self._co_attention_dim, 1))
+        # initialize parameters
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.w_b)
+        nn.init.xavier_uniform_(self.w_t)
+        nn.init.xavier_uniform_(self.w_p)
+        nn.init.xavier_uniform_(self.w_ht)
+    
+    def forward(self, team_hidden_state, player_hidden_state):
+        team_batch_dim, team_hidden_dim  = team_hidden_state.shape
+        player_batch_dim, player_num_nodes, player_hidden_dim = player_hidden_state.shape
+        assert team_batch_dim == player_batch_dim and team_hidden_dim == player_hidden_dim
+        # batch size * hidden dimension * 1
+        team_hidden_state = team_hidden_state.reshape((team_batch_dim, team_hidden_dim, 1))
+        # batch size * num of player nodes * hidden dimension
+        player_hidden_state = player_hidden_state.reshape((player_batch_dim, player_num_nodes, player_hidden_dim))
+        # batch size * num of player nodes * 1
+        C = torch.matmul(player_hidden_state, torch.matmul(self.w_b, team_hidden_state))
+        # batch size * co-attention dimension * 1
+        team_co_attention_hidden_state = torch.tanh(torch.matmul(self.w_t, team_hidden_state) + torch.matmul(torch.matmul(self.w_p, player_hidden_state.permute(0, 2, 1)), C))
+        # batch size * 1 * 1
+        team_attention = F.softmax(torch.matmul(torch.t(self.w_ht), team_co_attention_hidden_state), dim=2)
+        # batch size * hidden dimension
+        team_hidden_state_output = torch.squeeze(torch.matmul(team_attention, team_hidden_state.permute(0, 2, 1)))        
+        # batch size * 1 * hidden dimension
+        team_hidden_state_output = team_hidden_state_output.reshape(team_batch_dim, 1, team_hidden_dim)
+        return team_hidden_state_output
+
 class BGCNCell(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, input_dim_t: int, input_dim_p: int, feature_dim: int, hidden_dim: int, applying_player: bool):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, team_2_player: dict, input_dim_t: int, input_dim_p: int, feature_dim: int, hidden_dim: int, applying_player: bool, co_attention_dim: int = 32):
         super(BGCNCell, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
@@ -179,12 +228,17 @@ class BGCNCell(nn.Module):
         # feature dimension
         self._feature_dim = feature_dim
         # hidden dimension
-        self._hidden_dim = hidden_dim # set 100
+        self._hidden_dim = hidden_dim
+        # co-attention dimension
+        self._co_attention_dim = co_attention_dim
         # adjacency matrices
         self.register_buffer("adj", torch.FloatTensor(adj))
         if self._applying_player:
             self.register_buffer("adj_1", torch.FloatTensor(adj_1))
             self.register_buffer("adj_2", torch.FloatTensor(adj_2))
+        # team to player dictionary
+        if self._applying_player:
+            self._team_2_player = dict_processing(team_2_player, self._input_dim_t, self._input_dim_p)
         # GCN 1
         self.graph_conv1 = GraphConvolutionLayer(
             self.adj, self._feature_dim, self._hidden_dim, self._hidden_dim*2, bias=1.0
@@ -201,6 +255,10 @@ class BGCNCell(nn.Module):
             # RGCN 2
             self.r_graph_conv2 = RelationalGraphConvLayer(
                 self.adj_1, self.adj_2, self._feature_dim, self._hidden_dim, self._hidden_dim
+            )
+            # Co-attention
+            self.co_attention = ParallelCoAttentionLayer(
+                self._hidden_dim, self._co_attention_dim
             )
 
     def forward(self, inputs, hidden_state):
@@ -249,8 +307,27 @@ class BGCNCell(nn.Module):
             new_hidden_state_p = u_p * player_hidden_state + (1.0 - u_p) * c_p
         
         if self._applying_player:
-            # batch size, (num of nodes * hidden state dimension)
-            new_hidden_state = torch.cat((new_hidden_state_t, new_hidden_state_p), 1)
+            # # batch size * (num of nodes * hidden state dimension)
+            # new_hidden_state = torch.cat((new_hidden_state_t, new_hidden_state_p), 1)
+            # batch size * (num of team nodes * hidden state dimension)
+            batch_dim_t, team_nodes_hidden_dim = new_hidden_state_t.shape
+            # batch size * (num of player nodes * hidden state dimension)
+            batch_dim_p, player_nodes_hidden_dim_ = new_hidden_state_p.shape
+            assert batch_dim_t == batch_dim_p
+            # batch size * num of team nodes * hidden state dimension
+            co_attention_hidden_state_t = new_hidden_state_t.reshape((batch_dim_t, self._input_dim_t, self._hidden_dim))
+            # batch size * num of player nodes * hidden state dimension
+            co_attention_hidden_state_p = new_hidden_state_p.reshape((batch_dim_p, self._input_dim_p, self._hidden_dim))
+            # batch size * num of team nodes * hidden state dimension
+            for team in self._team_2_player:
+                if team == 0:
+                    co_attention_output_t = self.co_attention(co_attention_hidden_state_t[:, team, :], co_attention_hidden_state_p[:, self._team_2_player[team], :])
+                else:
+                    co_attention_output_t = torch.cat((co_attention_output_t, self.co_attention(co_attention_hidden_state_t[:, team, :], co_attention_hidden_state_p[:, self._team_2_player[team], :])), dim=1)
+            # batch size * (num of team nodes * hidden state dimension)
+            co_attention_output_t = co_attention_output_t.reshape(batch_dim_t, team_nodes_hidden_dim)
+            # batch size * (num of nodes * hidden state dimension)
+            new_hidden_state = torch.cat((co_attention_output_t, new_hidden_state_p), 1)
         else:
             # batch size, (num of nodes * hidden state dimension)
             new_hidden_state = new_hidden_state_t
@@ -262,7 +339,7 @@ class BGCNCell(nn.Module):
 
 
 class BGCN(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, hidden_dim: int, linear_transformation: bool, applying_player: bool, **kwargs):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, team_2_player: dict, hidden_dim: int, linear_transformation: bool, applying_player: bool, **kwargs):
         super(BGCN, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
@@ -279,6 +356,9 @@ class BGCN(nn.Module):
         self.register_buffer("adj_1", torch.FloatTensor(adj_1))
         self.register_buffer("adj_2", torch.FloatTensor(adj_2))
 
+        # team to player dictionary
+        self._team_2_player = team_2_player
+
         # feature dimension
         if self._linear_transformation:
             self._aspect_dim = 16
@@ -291,7 +371,7 @@ class BGCN(nn.Module):
             self._feature_dim = feat.shape[2]
 
         # BGCN cell
-        self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self._input_dim_t, self._input_dim_p, self._feature_dim, self._hidden_dim, self._applying_player)
+        self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self._team_2_player, self._input_dim_t, self._input_dim_p, self._feature_dim, self._hidden_dim, self._applying_player)
 
     def mask_aspect(self, feature_dim, weight, feature_index):
         # aspect feature dim * aspect dim

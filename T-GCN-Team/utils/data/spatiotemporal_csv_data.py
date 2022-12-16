@@ -90,3 +90,7 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
     @property
     def feat(self):
         return self._feat
+
+    @property
+    def player_2_team(self):
+        return self._player_team_dict
