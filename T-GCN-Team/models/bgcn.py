@@ -4,9 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from utils.graph_conv import calculate_laplacian_with_self_loop
 from utils.dict_processing import dict_processing
-import threading
 import numpy as np
-from typing import Optional
 
 class GraphConvolutionLayer(nn.Module):
     def __init__(self, adj: np.ndarray, feature_dim: int, input_dim: int, output_dim: int, bias: float = 0.0):
@@ -75,8 +73,8 @@ class GraphConvolutionLayer(nn.Module):
     @property
     def hyperparameters(self):
         return {
-            "num_gru_units": self._input_dim,
-            "output_dim": self._output_dim,
+            # "num_gru_units": self._input_dim,
+            # "output_dim": self._output_dim,
             "bias_init_value": self._bias_init_value,
         }
 
@@ -170,14 +168,12 @@ class RelationalGraphConvLayer(nn.Module):
         return outputs
 
 class ParallelCoAttentionLayer(nn.Module):
-    def __init__(self, hidden_dim: int, co_attention_dim: int, src_length_masking: bool = True):
+    def __init__(self, hidden_dim: int, co_attention_dim: int):
         super(ParallelCoAttentionLayer, self).__init__()
         # hidden dimension
         self._hidden_dim = hidden_dim
         # co-attention dimension
         self._co_attention_dim = co_attention_dim
-        # appying source length masking
-        self._src_length_masking = src_length_masking
         # weight (hidden dimension * hidden dimension)
         self.w_b = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
         # weight (co-attention dimension * hidden dimension)
@@ -216,7 +212,7 @@ class ParallelCoAttentionLayer(nn.Module):
         return team_hidden_state_output
 
 class BGCNCell(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, team_2_player: dict, input_dim_t: int, input_dim_p: int, feature_dim: int, hidden_dim: int, applying_player: bool, co_attention_dim: int = 32):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, team_2_player: dict, input_dim_t: int, input_dim_p: int, feature_dim: int, hidden_dim: int, co_attention_dim: int, applying_player: bool):
         super(BGCNCell, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
@@ -335,11 +331,41 @@ class BGCNCell(nn.Module):
 
     @property
     def hyperparameters(self):
-        return {"input_dim": self._input_dim, "hidden_dim": self._hidden_dim}
+        return {"hidden_dim": self._hidden_dim}
 
+class AttentionLayer(nn.Module):
+    def __init__(self, hidden_dim: int, **kwargs):
+        super(AttentionLayer, self).__init__(**kwargs)
+        # hidden dimension
+        self._hidden_dim = hidden_dim
+        # weight (hidden dimension * hidden dimension)
+        self.w = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
+        # biases (hidden dimension)
+        self.u = nn.Parameter(torch.FloatTensor(self._hidden_dim, 1))
+        # initialize parameters
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.w)
+        nn.init.xavier_uniform_(self.u)
+        
+    def forward(self, inputs):
+        # batch size * seq length * all hidden dimension
+        inputs = inputs.transpose(0, 1)
+        # batch size * seq length * all hidden dimension
+        u = torch.tanh(torch.matmul(inputs, self.w))
+        # batch size * seq length * 1
+        attn = torch.matmul(u, self.u)
+        # batch size * seq length * 1
+        attn_score = F.softmax(attn, dim=1)
+        # batch size * seq length * all hidden dimension
+        scored_inputs = inputs * attn_score
+        # batch size * all hidden dimension
+        aggr_inputs = torch.sum(scored_inputs, dim=1)
+        return aggr_inputs
 
 class BGCN(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, team_2_player: dict, hidden_dim: int, linear_transformation: bool, applying_player: bool, **kwargs):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, team_2_player: dict, hidden_dim: int, co_attention_dim: int, linear_transformation: bool, applying_player: bool, applying_attention: bool, **kwargs):
         super(BGCN, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
@@ -349,8 +375,12 @@ class BGCN(nn.Module):
         self._input_dim_p = adj_1.shape[0]
         # hidden state dimension
         self._hidden_dim = hidden_dim
+        # co-attention_dim dimension
+        self._co_attention_dim = co_attention_dim
         # using linear transformation or not
         self._linear_transformation = linear_transformation
+        # applying attention
+        self._applying_attention = applying_attention
         # adjacency matrices
         self.register_buffer("adj", torch.FloatTensor(adj))
         self.register_buffer("adj_1", torch.FloatTensor(adj_1))
@@ -371,7 +401,9 @@ class BGCN(nn.Module):
             self._feature_dim = feat.shape[2]
 
         # BGCN cell
-        self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self._team_2_player, self._input_dim_t, self._input_dim_p, self._feature_dim, self._hidden_dim, self._applying_player)
+        self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self._team_2_player, self._input_dim_t, self._input_dim_p, self._feature_dim, self._hidden_dim, self._co_attention_dim, self._applying_player)
+        if self._applying_attention:
+            self.attention = AttentionLayer(self._input_dim_t*self._hidden_dim)
 
     def mask_aspect(self, feature_dim, weight, feature_index):
         # aspect feature dim * aspect dim
@@ -422,18 +454,38 @@ class BGCN(nn.Module):
 
         # initial output
         output = None
+        if self._applying_attention:
+            # seq size * batch size * (num of nodes * hidden dimension)
+            attention_output = torch.zeros(seq_dim, batch_dim, self._input_dim_t*self._hidden_dim)
         for i in range(seq_dim):
             output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state)
+            if self._applying_attention:
+                attention_output[i] = output[:, :self._input_dim_t*self._hidden_dim]
             # batch size * num of nodes * hidden dimension
             output = output.reshape((batch_dim, new_input_dim, self._hidden_dim))
-        return output
+
+        # attention
+        if self._applying_attention:
+            output = self.attention(attention_output).reshape((batch_dim, self._input_dim_t, self._hidden_dim))
+            
+        return output[:, :self._input_dim_t, :]
 
     @staticmethod
     def add_model_specific_arguments(parent_parser):
         parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--hidden_dim", type=int, default=64)
+        parser.add_argument("--co_attention_dim", type=int, default=32)
+        parser.add_argument("--linear_transformation", action="store_true")
+        parser.add_argument("--applying_player", action="store_true")
+        parser.add_argument("--applying_attention", action="store_true")
         return parser
 
     @property
     def hyperparameters(self):
-        return {"input_dim": self._input_dim_t, "hidden_dim": self._hidden_dim}
+        return {
+            "hidden_dim": self._hidden_dim,
+            "co_attention_dim": self._co_attention_dim,
+            "linear_transformation": self._linear_transformation,
+            "applying_player": self._applying_player,
+            "applying_attention": self._applying_attention
+        }
