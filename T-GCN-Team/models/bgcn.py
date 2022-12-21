@@ -214,7 +214,7 @@ class ParallelCoAttentionLayer(nn.Module):
             # batch size * num of aspect * aspect dimension
             player_hidden_state_p = player_hidden_state_p.reshape((player_batch_dim, self._num_of_aspect, self._aspect_dim)).clone()
             # batch size * num of aspect * num of aspect
-            C = torch.matmul(player_hidden_state_p, torch.matmul(self.w_b, team_hidden_state_t))
+            C = torch.tanh(torch.matmul(player_hidden_state_p, torch.matmul(self.w_b, team_hidden_state_t)))
             # batch size * co-attention dimension * num of aspect
             team_co_attention_hidden_state = torch.tanh(torch.matmul(self.w_t, team_hidden_state_t) + torch.matmul(torch.matmul(self.w_p, player_hidden_state_p.permute(0, 2, 1)), C))
             # batch size * co-attention dimension * num of aspect
