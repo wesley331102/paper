@@ -192,6 +192,12 @@ class ParallelCoAttentionLayer(nn.Module):
         nn.init.xavier_uniform_(self.w_ht)
     
     def forward(self, team_hidden_state, player_hidden_state):
+        # TODO
+        # one-to-one into co-attention(?)
+        # team 
+        # batch size * aspect dimension * num of aspect
+        # player
+        #  batch size * seq length(num of aspect???) * aspect dimension 
         team_batch_dim, team_hidden_dim  = team_hidden_state.shape
         player_batch_dim, player_num_nodes, player_hidden_dim = player_hidden_state.shape
         assert team_batch_dim == player_batch_dim and team_hidden_dim == player_hidden_dim
@@ -303,8 +309,6 @@ class BGCNCell(nn.Module):
             new_hidden_state_p = u_p * player_hidden_state + (1.0 - u_p) * c_p
         
         if self._applying_player:
-            # # batch size * (num of nodes * hidden state dimension)
-            # new_hidden_state = torch.cat((new_hidden_state_t, new_hidden_state_p), 1)
             # batch size * (num of team nodes * hidden state dimension)
             batch_dim_t, team_nodes_hidden_dim = new_hidden_state_t.shape
             # batch size * (num of player nodes * hidden state dimension)
@@ -365,7 +369,7 @@ class AttentionLayer(nn.Module):
         return aggr_inputs
 
 class BGCN(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, team_2_player: dict, hidden_dim: int, co_attention_dim: int, linear_transformation: bool, applying_player: bool, applying_attention: bool, **kwargs):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, team_2_player: dict, aspect_dim: int, co_attention_dim: int, linear_transformation: bool, applying_player: bool, applying_attention: bool, **kwargs):
         super(BGCN, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
@@ -374,7 +378,7 @@ class BGCN(nn.Module):
         # num of nodes for player
         self._input_dim_p = adj_1.shape[0]
         # hidden state dimension
-        self._hidden_dim = hidden_dim
+        self._hidden_dim = aspect_dim * 4
         # co-attention_dim dimension
         self._co_attention_dim = co_attention_dim
         # using linear transformation or not
@@ -391,7 +395,8 @@ class BGCN(nn.Module):
 
         # feature dimension
         if self._linear_transformation:
-            self._aspect_dim = 16
+            self._aspect_dim = aspect_dim
+            assert self._aspect_dim * 4 == self._hidden_dim
             self.linear_transformation_offense = nn.Linear(5, self._aspect_dim)
             self.linear_transformation_defend = nn.Linear(3, self._aspect_dim)
             self.linear_transformation_error = nn.Linear(2, self._aspect_dim)
@@ -473,7 +478,7 @@ class BGCN(nn.Module):
     @staticmethod
     def add_model_specific_arguments(parent_parser):
         parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument("--hidden_dim", type=int, default=64)
+        parser.add_argument("--aspect_dim", type=int, default=16)
         parser.add_argument("--co_attention_dim", type=int, default=32)
         parser.add_argument("--linear_transformation", action="store_true")
         parser.add_argument("--applying_player", action="store_true")
@@ -483,6 +488,7 @@ class BGCN(nn.Module):
     @property
     def hyperparameters(self):
         return {
+            "aspect_dim": self._aspect_dim,
             "hidden_dim": self._hidden_dim,
             "co_attention_dim": self._co_attention_dim,
             "linear_transformation": self._linear_transformation,
