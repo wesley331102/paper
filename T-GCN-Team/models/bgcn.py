@@ -168,12 +168,12 @@ class RelationalGraphConvLayer(nn.Module):
         return outputs
 
 class ParallelCoAttentionLayer(nn.Module):
-    def __init__(self, aspect_dim: int, num_of_aspect: int, co_attention_dim: int):
+    def __init__(self, hidden_dim: int, num_of_aspect: int, co_attention_dim: int):
         super(ParallelCoAttentionLayer, self).__init__()
         # num of aspect
         self._num_of_aspect = num_of_aspect
         # aspect dimension
-        self._aspect_dim = aspect_dim
+        self._aspect_dim = hidden_dim // num_of_aspect
         # co-attention dimension
         self._co_attention_dim = co_attention_dim
         # weight (aspect dimension * aspect dimension)
@@ -237,7 +237,7 @@ class ParallelCoAttentionLayer(nn.Module):
         return torch.mean(team_hidden_state_output_final, dim=0), player_hidden_state_output_final
 
 class BGCNCell(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, team_2_player: dict, input_dim_t: int, input_dim_p: int, feature_dim: int, hidden_dim: int, aspect_dim: int, co_attention_dim: int, applying_player: bool):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, team_2_player: dict, input_dim_t: int, input_dim_p: int, aspect_num: int, feature_dim: int, hidden_dim: int, co_attention_dim: int, applying_player: bool):
         super(BGCNCell, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
@@ -246,12 +246,12 @@ class BGCNCell(nn.Module):
         # num of nodes for player
         if self._applying_player:
             self._input_dim_p = input_dim_p
+        # aspect dimension
+        self._aspect_num = aspect_num
         # feature dimension
         self._feature_dim = feature_dim
         # hidden dimension
         self._hidden_dim = hidden_dim
-        # aspect dimension
-        self._aspect_dim = aspect_dim
         # co-attention dimension
         self._co_attention_dim = co_attention_dim
         # adjacency matrices
@@ -281,7 +281,7 @@ class BGCNCell(nn.Module):
             )
             # Co-attention
             self.co_attention = ParallelCoAttentionLayer(
-                self._aspect_dim, 4, self._co_attention_dim
+                self._hidden_dim, self._aspect_num, self._co_attention_dim
             )
 
     def forward(self, inputs, hidden_state):
@@ -385,7 +385,7 @@ class AttentionLayer(nn.Module):
         return aggr_inputs
 
 class BGCN(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, team_2_player: dict, aspect_dim: int, co_attention_dim: int, linear_transformation: bool, applying_player: bool, applying_attention: bool, **kwargs):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, team_2_player: dict, aspect_num: int, hidden_dim: int, co_attention_dim: int, linear_transformation: bool, applying_player: bool, applying_attention: bool, **kwargs):
         super(BGCN, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
@@ -393,8 +393,10 @@ class BGCN(nn.Module):
         self._input_dim_t = adj.shape[0]
         # num of nodes for player
         self._input_dim_p = adj_1.shape[0]
+        # num of aspect
+        self._aspect_num = aspect_num
         # hidden state dimension
-        self._hidden_dim = aspect_dim * 4
+        self._hidden_dim = hidden_dim
         # co-attention_dim dimension
         self._co_attention_dim = co_attention_dim
         # using linear transformation or not
@@ -411,17 +413,16 @@ class BGCN(nn.Module):
 
         # feature dimension
         if self._linear_transformation:
-            self._aspect_dim = aspect_dim
-            assert self._aspect_dim * 4 == self._hidden_dim
+            # tunable
+            self._aspect_dim = 16
             self.linear_transformation_offense = nn.Linear(5, self._aspect_dim)
             self.linear_transformation_defend = nn.Linear(3, self._aspect_dim)
             self.linear_transformation_error = nn.Linear(2, self._aspect_dim)
             self.linear_transformation_influence = nn.Linear(2, self._aspect_dim)
-        else:
-            self._hidden_dim = feat.shape[2]
+        self._feature_dim = self._aspect_dim*4 if self._linear_transformation else feat.shape[2]
 
         # BGCN cell
-        self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self._team_2_player, self._input_dim_t, self._input_dim_p, self._hidden_dim, self._hidden_dim, self._aspect_dim, self._co_attention_dim, self._applying_player)
+        self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self._team_2_player, self._input_dim_t, self._input_dim_p, self._aspect_num, self._feature_dim, self._hidden_dim, self._co_attention_dim, self._applying_player)
         if self._applying_attention:
             self.attention = AttentionLayer(self._input_dim_t*self._hidden_dim)
 
@@ -476,6 +477,7 @@ class BGCN(nn.Module):
         output = None
         if self._applying_attention:
             # seq size * batch size * (num of nodes * hidden dimension)
+            # TODO output size
             attention_output = torch.zeros(seq_dim, batch_dim, self._input_dim_t*self._hidden_dim)
         for i in range(seq_dim):
             output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state)
@@ -493,7 +495,8 @@ class BGCN(nn.Module):
     @staticmethod
     def add_model_specific_arguments(parent_parser):
         parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument("--aspect_dim", type=int, default=16)
+        parser.add_argument("--aspect_num", type=int, default=4)
+        parser.add_argument("--hidden_dim", type=int, default=64)
         parser.add_argument("--co_attention_dim", type=int, default=32)
         parser.add_argument("--linear_transformation", action="store_true")
         parser.add_argument("--applying_player", action="store_true")
@@ -503,7 +506,7 @@ class BGCN(nn.Module):
     @property
     def hyperparameters(self):
         return {
-            "aspect_dim": self._aspect_dim,
+            "aspect_num": self._aspect_num,
             "hidden_dim": self._hidden_dim,
             "co_attention_dim": self._co_attention_dim,
             "linear_transformation": self._linear_transformation,
