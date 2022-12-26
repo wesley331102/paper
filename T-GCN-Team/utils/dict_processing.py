@@ -6,7 +6,8 @@ def dict_processing(team_2_player: dict, num_t: int, num_p: int):
     for player in team_2_player:
         if team_2_player[player] is not None:
             if team_to_player[team_2_player[player]] is None:
-                team_to_player[team_2_player[player]] = [player]
+                team_to_player[team_2_player[player]] = [player + num_t]
             else:
-                team_to_player[team_2_player[player]].append(player)
+                team_to_player[team_2_player[player]].append(player + num_t)
+
     return team_to_player
