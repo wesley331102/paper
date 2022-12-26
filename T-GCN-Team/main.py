@@ -21,7 +21,7 @@ def get_model(args, dm):
 
 def get_task(args, model, dm):
     task = getattr(tasks, args.settings.capitalize() + "ForecastTask")(
-        model=model, feat_max_val=dm.y_max, **vars(args)
+        model=model, feat_max_val=dm.y_max, team_2_player= dm.player_2_team, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
     )
     return task
 

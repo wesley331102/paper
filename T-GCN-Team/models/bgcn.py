@@ -479,11 +479,17 @@ class BGCN(nn.Module):
             # batch size * num of nodes * hidden dimension
             output = output.reshape((batch_dim, new_input_dim, self._hidden_dim))
 
+        all_output = output.clone()
+        
         # attention
         if self._applying_attention:
             output = self.attention(attention_output).reshape((batch_dim, self._input_dim_t, self._hidden_dim))
-            
-        return output[:, :self._input_dim_t, :]
+        
+        if self._applying_player:
+            final_output = torch.cat((output[:, :self._input_dim_t, :], all_output[:, self._input_dim_t:, :]), dim=1)
+            return final_output
+        else:
+            return output[:, :self._input_dim_t, :]
 
     @staticmethod
     def add_model_specific_arguments(parent_parser):

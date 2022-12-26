@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 import torchmetrics
 import utils.metrics
 import utils.losses
+from utils.dict_processing import dict_processing_loss
 import torch
 
 class SupervisedForecastTask(pl.LightningModule):
@@ -17,6 +18,10 @@ class SupervisedForecastTask(pl.LightningModule):
         learning_rate: float = 1e-3,
         weight_decay: float = 1.5e-3,
         feat_max_val: float = 1.0,
+        applying_player: bool = False,
+        team_2_player: dict = {},
+        t_dim: int = 0,
+        p_dim: int = 0,
         **kwargs
     ):
         super(SupervisedForecastTask, self).__init__()
@@ -32,13 +37,21 @@ class SupervisedForecastTask(pl.LightningModule):
         #     if regressor == "linear"
         #     else regressor
         # )
-        self.regressor = nn.Linear(
-                self.model.hyperparameters.get("hidden_dim")*2,
-                1,
-            )
+        self.applying_player = applying_player
+        if self.applying_player:
+            self.regressor = nn.Linear(
+                    self.model.hyperparameters.get("hidden_dim")*4,
+                    1,
+                )
+        else:
+            self.regressor = nn.Linear(
+                    self.model.hyperparameters.get("hidden_dim")*2,
+                    1,
+                )
         
         self._loss = loss
         self.feat_max_val = feat_max_val
+        self.team_2_player = dict_processing_loss(team_2_player, t_dim, p_dim)
 
     def forward(self, x):
         # (batch_size, seq_len, num_nodes)
@@ -77,7 +90,10 @@ class SupervisedForecastTask(pl.LightningModule):
         if self._loss == 'nba_mse':
             return utils.losses.nba_mse_with_regularizer_loss(inputs, targets, self)
         if self._loss == 'nba_rmse':
-            return utils.losses.nba_rmse_with_regularizer_loss(inputs, targets, self)
+            if self.applying_player:
+                return utils.losses.nba_rmse_with_player_with_regularizer_loss(inputs, targets, self, self.team_2_player)
+            else:
+                return utils.losses.nba_rmse_with_regularizer_loss(inputs, targets, self)
         if self._loss == 'nba_ce':
             return utils.losses.nba_cross_entropy_loss(inputs, targets, self)
             
@@ -96,7 +112,7 @@ class SupervisedForecastTask(pl.LightningModule):
         loss = self.loss(predictions, y)
         # TODO
         mean_error = utils.metrics.get_mean(0, y)
-        accr = utils.metrics.get_accuracy(predictions, y, self)
+        # accr = utils.metrics.get_accuracy(predictions, y, self)
         # rmse = torch.sqrt(torchmetrics.functional.mean_squared_error(predictions, y))
         # mae = torchmetrics.functional.mean_absolute_error(predictions, y)
         # accuracy = utils.metrics.accuracy(predictions, y)
@@ -108,12 +124,13 @@ class SupervisedForecastTask(pl.LightningModule):
             "mse_mean": mean_error,
             # "RMSE": rmse,
             # "MAE": mae,
-            "accuracy": accr,
+            # "accuracy": accr,
             # "R2": r2,
             # "ExplainedVar": explained_variance,
         }
         self.log_dict(metrics)
-        p, real_y = utils.losses.nba_output(predictions, y, self)
+        # p, real_y = utils.losses.nba_output(predictions, y, self)
+        p, real_y = utils.losses.nba_output_with_player(predictions, y, self, self.team_2_player)
         # return predictions.reshape(batch[1].size()), y.reshape(batch[1].size())
         return p, real_y
 
