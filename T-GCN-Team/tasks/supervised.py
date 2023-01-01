@@ -38,15 +38,22 @@ class SupervisedForecastTask(pl.LightningModule):
         #     else regressor
         # )
         self.applying_player = applying_player
+        self.using_other = False
         if self.applying_player:
-            # self.regressor = nn.Linear(
-            #         self.model.hyperparameters.get("hidden_dim")*4,
-            #         1,
-            #     )
-            self.regressor = nn.Linear(
-                    self.model.hyperparameters.get("hidden_dim")*42,
-                    1,
-                )
+            if self.using_other:
+                self.regressor = nn.Linear(
+                        self.model.hyperparameters.get("hidden_dim")*4 + 4,
+                        1,
+                    )
+            else:
+                # self.regressor = nn.Linear(
+                #         self.model.hyperparameters.get("hidden_dim")*42,
+                #         1,
+                #     )
+                self.regressor = nn.Linear(
+                        self.model.hyperparameters.get("hidden_dim")*4,
+                        1,
+                    )
         else:
             self.regressor = nn.Linear(
                     self.model.hyperparameters.get("hidden_dim")*2,

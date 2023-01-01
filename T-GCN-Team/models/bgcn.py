@@ -80,7 +80,7 @@ class GraphConvolutionLayer(nn.Module):
 
 class RelationalGraphConvLayer(nn.Module):
     def __init__(
-        self, adj_1: np.ndarray, adj_2: np.ndarray, feature_dim: int, input_dim: int, output_dim: int, bias: float = 0.0
+        self, adj_1: np.ndarray, adj_2: np.ndarray, adj_3: np.ndarray, adj_4: np.ndarray, adj_5: np.ndarray, feature_dim: int, input_dim: int, output_dim: int, bias: float = 0.0
     ):
         super(RelationalGraphConvLayer, self).__init__()
         # feature dimension
@@ -94,13 +94,23 @@ class RelationalGraphConvLayer(nn.Module):
         # num of bases
         self._num_bases = 30
         # num of relationships
-        self._num_rel = 2
+        # tunable
+        self._num_rel = 5
         # laplacian matrices
         self.register_buffer(
             "laplacian_1", calculate_laplacian_with_self_loop(torch.FloatTensor(adj_1))
         )
         self.register_buffer(
             "laplacian_2", calculate_laplacian_with_self_loop(torch.FloatTensor(adj_2))
+        )
+        self.register_buffer(
+            "laplacian_3", calculate_laplacian_with_self_loop(torch.FloatTensor(adj_3))
+        )
+        self.register_buffer(
+            "laplacian_4", calculate_laplacian_with_self_loop(torch.FloatTensor(adj_4))
+        )
+        self.register_buffer(
+            "laplacian_5", calculate_laplacian_with_self_loop(torch.FloatTensor(adj_5))
         )
         # weight bases (num of bases * (feature dimension + input dimension) * output dimension)
         self.w_bases = nn.Parameter(
@@ -136,9 +146,16 @@ class RelationalGraphConvLayer(nn.Module):
         )
         supports = []
         # A[x, h] (num of player nodes * ((feature dimension + input dimension) * batch size))
+        # tunable
         supports.append(self.laplacian_1 @ a_times_concat)
         # num of relationships * A[x, h] num of relationships * (num of player nodes * ((feature dimension + input dimension) * batch size))
         supports.append(self.laplacian_2 @ a_times_concat)
+        # num of relationships * A[x, h] num of relationships * (num of player nodes * ((feature dimension + input dimension) * batch size))
+        supports.append(self.laplacian_3 @ a_times_concat)
+        # num of relationships * A[x, h] num of relationships * (num of player nodes * ((feature dimension + input dimension) * batch size))
+        supports.append(self.laplacian_4 @ a_times_concat)
+        # num of relationships * A[x, h] num of relationships * (num of player nodes * ((feature dimension + input dimension) * batch size))
+        supports.append(self.laplacian_5 @ a_times_concat)
         # A[x, h] (num of player nodes * (num of relationships * (feature dimension + input dimension) * batch size))
         a_times_concat = torch.cat(supports, dim=1)
         # A[x, h] (num of player nodes * (num of relationships * (feature dimension + input dimension)) * batch size)
@@ -230,7 +247,7 @@ class ParallelCoAttentionLayer(nn.Module):
         return torch.mean(team_hidden_state_output, dim=1), player_hidden_state_output
 
 class BGCNCell(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, team_2_player: dict, input_dim_t: int, input_dim_p: int, aspect_num: int, feature_dim: int, hidden_dim: int, co_attention_dim: int, applying_player: bool):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, adj_3: np.ndarray, adj_4: np.ndarray, adj_5: np.ndarray, team_2_player: dict, input_dim_t: int, input_dim_p: int, aspect_num: int, feature_dim: int, hidden_dim: int, co_attention_dim: int, applying_player: bool):
         super(BGCNCell, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
@@ -252,6 +269,9 @@ class BGCNCell(nn.Module):
         if self._applying_player:
             self.register_buffer("adj_1", torch.FloatTensor(adj_1))
             self.register_buffer("adj_2", torch.FloatTensor(adj_2))
+            self.register_buffer("adj_3", torch.FloatTensor(adj_3))
+            self.register_buffer("adj_4", torch.FloatTensor(adj_4))
+            self.register_buffer("adj_5", torch.FloatTensor(adj_5))
         # team to player dictionary
         if self._applying_player:
             self._team_2_player = dict_processing(team_2_player, self._input_dim_t, self._input_dim_p)
@@ -266,11 +286,11 @@ class BGCNCell(nn.Module):
         if self._applying_player:
             # RGCN 1
             self.r_graph_conv1 = RelationalGraphConvLayer(
-                self.adj_1, self.adj_2, self._feature_dim, self._hidden_dim, self._hidden_dim*2, bias=1.0
+                self.adj_1, self.adj_2, self.adj_3, self.adj_4, self.adj_5, self._feature_dim, self._hidden_dim, self._hidden_dim*2, bias=1.0
             )
             # RGCN 2
             self.r_graph_conv2 = RelationalGraphConvLayer(
-                self.adj_1, self.adj_2, self._feature_dim, self._hidden_dim, self._hidden_dim
+                self.adj_1, self.adj_2, self.adj_3, self.adj_4, self.adj_5, self._feature_dim, self._hidden_dim, self._hidden_dim
             )
             # Co-attention
             self.co_attention = ParallelCoAttentionLayer(
@@ -378,7 +398,7 @@ class AttentionLayer(nn.Module):
         return aggr_inputs
 
 class BGCN(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, feat: np.ndarray, team_2_player: dict, aspect_num: int, hidden_dim: int, co_attention_dim: int, linear_transformation: bool, applying_player: bool, applying_attention: bool, **kwargs):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, adj_3: np.ndarray, adj_4: np.ndarray, adj_5: np.ndarray, feat: np.ndarray, team_2_player: dict, aspect_num: int, hidden_dim: int, co_attention_dim: int, linear_transformation: bool, applying_player: bool, applying_attention: bool, **kwargs):
         super(BGCN, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
@@ -400,6 +420,9 @@ class BGCN(nn.Module):
         self.register_buffer("adj", torch.FloatTensor(adj))
         self.register_buffer("adj_1", torch.FloatTensor(adj_1))
         self.register_buffer("adj_2", torch.FloatTensor(adj_2))
+        self.register_buffer("adj_3", torch.FloatTensor(adj_3))
+        self.register_buffer("adj_4", torch.FloatTensor(adj_4))
+        self.register_buffer("adj_5", torch.FloatTensor(adj_5))
 
         # team to player dictionary
         self._team_2_player = team_2_player
@@ -415,7 +438,7 @@ class BGCN(nn.Module):
         self._feature_dim = self._aspect_dim*4 if self._linear_transformation else feat.shape[2]
 
         # BGCN cell
-        self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self._team_2_player, self._input_dim_t, self._input_dim_p, self._aspect_num, self._feature_dim, self._hidden_dim, self._co_attention_dim, self._applying_player)
+        self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self.adj_3, self.adj_4, self.adj_5, self._team_2_player, self._input_dim_t, self._input_dim_p, self._aspect_num, self._feature_dim, self._hidden_dim, self._co_attention_dim, self._applying_player)
         if self._applying_attention:
             self.attention = AttentionLayer(self._input_dim_t*self._hidden_dim)
 

@@ -40,14 +40,20 @@ def load_adjacency_matrix(adj_path, dtype=np.float32):
     adj = np.array(adj_df, dtype=dtype)
     return adj
 
-def dict_to_list(data):
+def dict_to_list(data, using_other: bool=False):
     result = list()
     for data_dict in data:
         res = list()
-        for key in data_dict:
-            res.append((key[0], key[1],  data_dict[key]))
-        while len(res) != 15:
-            res.append((0, 0, 0.0))
+        if using_other:
+            for key in data_dict:
+                res.append((key[0], key[1],  data_dict[key][0], data_dict[key][1], data_dict[key][2], data_dict[key][3], data_dict[key][4]))
+            while len(res) != 15:
+                res.append((0, 0, 0.0, 0.0, 0.0, 0.0, 0.0))
+        else:
+            for key in data_dict:
+                res.append((key[0], key[1],  data_dict[key]))
+            while len(res) != 15:
+                res.append((0, 0, 0.0))
         result.append(res)
     return result
 

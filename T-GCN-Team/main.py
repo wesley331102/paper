@@ -16,12 +16,13 @@ def get_model(args, dm):
     if args.model_name == "GRU":
         model = models.GRU(input_dim=dm.adj.shape[0], hidden_dim=args.hidden_dim)
     if args.model_name == "BGCN":
-        model = models.BGCN(adj=dm.adj, adj_1=dm.adj_1, adj_2=dm.adj_2, feat=dm.feat, team_2_player=dm.player_2_team, aspect_num=args.aspect_num, hidden_dim=args.hidden_dim, co_attention_dim=args.co_attention_dim, linear_transformation=args.linear_transformation, applying_player=args.applying_player, applying_attention=args.applying_attention)
+        model = models.BGCN(adj=dm.adj, adj_1=dm.adj_1, adj_2=dm.adj_2, adj_3=dm.adj_3, adj_4=dm.adj_4, adj_5=dm.adj_5, feat=dm.feat, team_2_player=dm.player_2_team, aspect_num=args.aspect_num, hidden_dim=args.hidden_dim, co_attention_dim=args.co_attention_dim, linear_transformation=args.linear_transformation, applying_player=args.applying_player, applying_attention=args.applying_attention)
     return model
 
 def get_task(args, model, dm):
     task = getattr(tasks, args.settings.capitalize() + "ForecastTask")(
-        model=model, feat_max_val=dm.y_max, team_2_player= dm.player_2_team, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
+        # model=model, feat_max_val=dm.y_max, team_2_player= dm.player_2_team, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
+        model=model, team_2_player=dm.player_2_team, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
     )
     return task
 
@@ -41,9 +42,13 @@ def main_supervised(args):
         p_feat_path=os.path.join('data', 'new_player_list.p'),
         player_team_path=os.path.join('data', 'player_team_dict.p'),
         y_path=os.path.join('data', 'team_list_y.p'), 
+        # y_path=os.path.join('data', 'team_list_y_with_other.p'), 
         adj_path=os.path.join('data', 'team_adj.csv'), 
         adj_1_path=os.path.join('data', 'pass_adj.csv'),
         adj_2_path=os.path.join('data', 'ast_adj.csv'),
+        adj_3_path=os.path.join('data', 'def_adj.csv'),
+        adj_4_path=os.path.join('data', 'blk_adj.csv'),
+        adj_5_path=os.path.join('data', 'pf_adj.csv'),
         **vars(args)
     )
     model = get_model(args, dm)

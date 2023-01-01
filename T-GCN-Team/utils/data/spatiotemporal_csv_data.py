@@ -15,6 +15,9 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         adj_path: str,
         adj_1_path: str,
         adj_2_path: str,
+        adj_3_path: str,
+        adj_4_path: str,
+        adj_5_path: str,
         batch_size: int = 64,
         seq_len: int = 12,
         pre_len: int = 1,
@@ -30,6 +33,9 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         self._adj_path = adj_path
         self._adj_1_path = adj_1_path
         self._adj_2_path = adj_2_path
+        self._adj_3_path = adj_3_path
+        self._adj_4_path = adj_4_path
+        self._adj_5_path = adj_5_path
         self.batch_size = batch_size
         self.seq_len = seq_len
         self.pre_len = pre_len
@@ -38,10 +44,13 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         self._feat = utils.data.functions.load_features(self._feat_path, self._p_feat_path)
         self._player_team_dict = utils.data.functions.load_team_player_dict(self._player_team_path)
         self._y = utils.data.functions.load_targets(self._y_path)
-        self._y_max = utils.data.functions.load_y_max(self._y_path)
+        # self._y_max = utils.data.functions.load_y_max(self._y_path)
         self._adj = utils.data.functions.load_adjacency_matrix(self._adj_path)
         self._adj_1 = utils.data.functions.load_adjacency_matrix(self._adj_1_path)
         self._adj_2 = utils.data.functions.load_adjacency_matrix(self._adj_2_path)
+        self._adj_3 = utils.data.functions.load_adjacency_matrix(self._adj_3_path)
+        self._adj_4 = utils.data.functions.load_adjacency_matrix(self._adj_4_path)
+        self._adj_5 = utils.data.functions.load_adjacency_matrix(self._adj_5_path)
 
     @staticmethod
     def add_data_specific_arguments(parent_parser):
@@ -71,9 +80,9 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=len(self.val_dataset))
 
-    @property
-    def y_max(self):
-        return self._y_max
+    # @property
+    # def y_max(self):
+    #     return self._y_max
 
     @property
     def adj(self):
@@ -86,6 +95,18 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
     @property
     def adj_2(self):
         return self._adj_2
+
+    @property
+    def adj_3(self):
+        return self._adj_3
+
+    @property
+    def adj_4(self):
+        return self._adj_4
+
+    @property
+    def adj_5(self):
+        return self._adj_5
 
     @property
     def feat(self):
