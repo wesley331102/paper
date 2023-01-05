@@ -119,7 +119,7 @@ def nba_rmse_with_player_with_regularizer_loss(inputs, targets, model, team_2_pl
     reg_loss = lamda * reg_loss
     return rmse_loss + reg_loss
 
-def nba_cross_entropy_loss(inputs, targets, model):
+def nba_cross_entropy_loss_with_player(inputs, targets, model, team_2_player):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
     game = 0.0
@@ -130,7 +130,11 @@ def nba_cross_entropy_loss(inputs, targets, model):
         for j in range(t.shape[0]):
             if t[j][0] != 0 and t[j][1] != [0]:
                 if t[j][2] > 0:
-                    com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])]), 0)
+                    team_1_list = team_2_player[int(t[j][0])]
+                    team_2_list = team_2_player[int(t[j][1])]
+                    team_1_mean = torch.mean(inp[team_1_list], dim=0)
+                    team_2_mean = torch.mean(inp[team_2_list], dim=0)
+                    com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean, team_2_mean), 0)
                     real_y = model.regressor(com)
                     out = 1 / (1 + math.exp(-real_y[0].detach().numpy()))
                     ce_loss -= np.log(out)

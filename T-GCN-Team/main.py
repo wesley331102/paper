@@ -38,8 +38,10 @@ def get_callbacks(args):
 
 def main_supervised(args):
     dm = utils.data.SpatioTemporalCSVDataModule(
-        feat_path=os.path.join('data', 'new_team_list.p'), 
-        p_feat_path=os.path.join('data', 'new_player_list.p'),
+        # feat_path=os.path.join('data', 'new_team_list.p'), 
+        # p_feat_path=os.path.join('data', 'new_player_list.p'),
+        feat_path=os.path.join('data', 'new_team_list_other.p'), 
+        p_feat_path=os.path.join('data', 'new_player_list_other.p'),
         player_team_path=os.path.join('data', 'player_team_dict.p'),
         y_path=os.path.join('data', 'team_list_y.p'), 
         # y_path=os.path.join('data', 'team_list_y_with_other.p'), 

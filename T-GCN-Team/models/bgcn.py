@@ -434,7 +434,7 @@ class BGCN(nn.Module):
             self.linear_transformation_offense = nn.Linear(5, self._aspect_dim)
             self.linear_transformation_defend = nn.Linear(3, self._aspect_dim)
             self.linear_transformation_error = nn.Linear(2, self._aspect_dim)
-            self.linear_transformation_influence = nn.Linear(2, self._aspect_dim)
+            self.linear_transformation_influence = nn.Linear(4, self._aspect_dim)
         self._feature_dim = self._aspect_dim*4 if self._linear_transformation else feat.shape[2]
 
         # BGCN cell
@@ -478,7 +478,7 @@ class BGCN(nn.Module):
             offense_weight = self.mask_aspect(feature_dim, self.linear_transformation_offense.weight, [2, 5, 8, 9, 12])
             defend_weight = self.mask_aspect(feature_dim, self.linear_transformation_defend.weight, [10, 14, 15])
             error_weight = self.mask_aspect(feature_dim, self.linear_transformation_error.weight, [13, 17])
-            influence_weight = self.mask_aspect(feature_dim, self.linear_transformation_influence.weight, [19, 20])
+            influence_weight = self.mask_aspect(feature_dim, self.linear_transformation_influence.weight, [19, 20, 21, 22])
             # origin feature dimension * feature dimension
             aspect_weight = torch.cat((offense_weight, defend_weight, error_weight, influence_weight), dim=1)
             # feature dimension

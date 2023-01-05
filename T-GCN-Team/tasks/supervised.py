@@ -106,7 +106,7 @@ class SupervisedForecastTask(pl.LightningModule):
             else:
                 return utils.losses.nba_rmse_with_regularizer_loss(inputs, targets, self)
         if self._loss == 'nba_ce':
-            return utils.losses.nba_cross_entropy_loss(inputs, targets, self)
+            return utils.losses.nba_cross_entropy_loss_with_player(inputs, targets, self, self.team_2_player)
             
         raise NameError("Loss not supported:", self._loss)
 
@@ -123,7 +123,7 @@ class SupervisedForecastTask(pl.LightningModule):
         loss = self.loss(predictions, y)
         # TODO
         mean_error = utils.metrics.get_mean(0, y)
-        # accr = utils.metrics.get_accuracy(predictions, y, self)
+        accr = utils.metrics.get_accuracy(predictions, y, self, self.team_2_player)
         # rmse = torch.sqrt(torchmetrics.functional.mean_squared_error(predictions, y))
         # mae = torchmetrics.functional.mean_absolute_error(predictions, y)
         # accuracy = utils.metrics.accuracy(predictions, y)
@@ -135,7 +135,7 @@ class SupervisedForecastTask(pl.LightningModule):
             "mse_mean": mean_error,
             # "RMSE": rmse,
             # "MAE": mae,
-            # "accuracy": accr,
+            "accuracy": accr,
             # "R2": r2,
             # "ExplainedVar": explained_variance,
         }
