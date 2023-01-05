@@ -526,25 +526,21 @@ class BGCN(nn.Module):
         output = None
         if self._applying_attention:
             # seq size * batch size * (num of nodes * hidden dimension)
-            # TODO output size
-            attention_output = torch.zeros(seq_dim, batch_dim, self._input_dim_t*self._hidden_dim)
+            attention_output = torch.zeros(seq_dim, batch_dim, new_input_dim*self._hidden_dim)
         for i in range(seq_dim):
             output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state)
             if self._applying_attention:
-                attention_output[i] = output[:, :self._input_dim_t*self._hidden_dim]
+                attention_output[i] = output[:, :]
             # batch size * num of nodes * hidden dimension
             output = output.reshape((batch_dim, new_input_dim, self._hidden_dim))
-
-        all_output = output.clone()
         
         # attention
         if self._applying_attention:
-            attention_output = attention_output.reshape((seq_dim, batch_dim, self._input_dim_t, self._hidden_dim))
+            attention_output = attention_output.reshape((seq_dim, batch_dim, new_input_dim, self._hidden_dim))
             output = self.attention(attention_output)
         
         if self._applying_player:
-            final_output = torch.cat((output[:, :self._input_dim_t, :], all_output[:, self._input_dim_t:, :]), dim=1)
-            return final_output
+            return output
         else:
             return output[:, :self._input_dim_t, :]
 
