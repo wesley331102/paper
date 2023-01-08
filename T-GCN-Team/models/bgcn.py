@@ -399,7 +399,7 @@ class AttentionLayer(nn.Module):
 
 class InputAttentionLayer(nn.Module):
     def __init__(self, hidden_dim: int, **kwargs):
-        super(AttentionLayer, self).__init__(**kwargs)
+        super(InputAttentionLayer, self).__init__(**kwargs)
         # hidden dimension
         self._hidden_dim = hidden_dim
         # weight (hidden dimension)
@@ -412,22 +412,30 @@ class InputAttentionLayer(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        nn.init.xavier_uniform_(self.w)
-        nn.init.xavier_uniform_(self.u)
+        nn.init.xavier_uniform_(self.w1)
+        nn.init.xavier_uniform_(self.w2)
+        nn.init.xavier_uniform_(self.w3)
         
     def forward(self, inputs, hidden_state):
-        # batch size * seq length * all hidden dimension
-        inputs = inputs.transpose(0, 1)
-        # batch size * seq length * all hidden dimension
-        u = torch.tanh(torch.matmul(inputs, self.w2))
-        # batch size * seq length * 1
+        # batch size * num of nodes * seq length * hidden dimension
+        inputs = inputs.permute(0, 2, 1, 3)
+        # batch size * num of nodes * seq length * hidden dimension
+        batch_dim, input_dim, seq_dim, hidden_dim = inputs.shape
+        # batch size * (num of nodes * hidden dimension)
+        batch_dim_h, all_hidden_dim = hidden_state.shape
+        assert batch_dim == batch_dim_h and input_dim * hidden_dim == all_hidden_dim
+        # batch size * num of nodes * seq length * hidden dimension
+        hidden_state = hidden_state.reshape(batch_dim, input_dim, hidden_dim).repeat(1, seq_dim, 1).reshape(batch_dim, input_dim, seq_dim, hidden_dim)
+        # batch size * num of nodes * seq length * hidden dimension
+        u = torch.tanh(torch.matmul(inputs, self.w2) + torch.matmul(hidden_state, self.w3))
+        # batch size * num of nodes * seq length * 1
         attn = torch.matmul(u, self.w1)
-        # batch size * seq length * 1
-        attn_score = F.softmax(attn, dim=1)
-        # batch size * seq length * all hidden dimension
+        # batch size * num of nodes * seq length * 1
+        attn_score = F.softmax(attn, dim=2)
+        # batch size * num of nodes * seq length * hidden dimension
         scored_inputs = inputs * attn_score
-        # batch size * all hidden dimension
-        aggr_inputs = torch.sum(scored_inputs, dim=1)
+        # batch size * num of nodes * hidden dimension
+        aggr_inputs = torch.sum(scored_inputs, dim=2)
         return aggr_inputs
 
 class BGCN(nn.Module):
@@ -474,6 +482,7 @@ class BGCN(nn.Module):
         self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self.adj_3, self.adj_4, self.adj_5, self._team_2_player, self._input_dim_t, self._input_dim_p, self._aspect_num, self._feature_dim, self._hidden_dim, self._co_attention_dim, self._applying_player)
         if self._applying_attention:
             self.attention = AttentionLayer(self._hidden_dim)
+            self.inputAttention = InputAttentionLayer(self._hidden_dim)
 
     def mask_aspect(self, feature_dim, weight, feature_index):
         # aspect feature dim * aspect dim
@@ -528,7 +537,12 @@ class BGCN(nn.Module):
             # seq size * batch size * (num of nodes * hidden dimension)
             attention_output = torch.zeros(seq_dim, batch_dim, new_input_dim*self._hidden_dim)
         for i in range(seq_dim):
-            output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state)
+            if i == seq_dim - 1:
+                attention_input = self.inputAttention(new_inputs[:, :, :new_input_dim, :], hidden_state)
+                output, hidden_state = self.tgcn_cell(attention_input, hidden_state)
+            else:
+                output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state)
+
             if self._applying_attention:
                 attention_output[i] = output[:, :]
             # batch size * num of nodes * hidden dimension
