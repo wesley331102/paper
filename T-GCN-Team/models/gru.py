@@ -78,23 +78,28 @@ class GRUCell(nn.Module):
 class GRU(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int, **kwargs):
         super(GRU, self).__init__()
-        self._input_dim = input_dim  # num_nodes for prediction
+        # num of nodes for prediction
+        self._input_dim = input_dim
+        # hidden state dimension
         self._hidden_dim = hidden_dim
+        # GRU cell
         self.gru_cell = GRUCell(self._input_dim, self._hidden_dim)
 
     def forward(self, inputs):
-        batch_size, seq_len, num_nodes = inputs.shape
-        assert self._input_dim == num_nodes
-        outputs = list()
-        hidden_state = torch.zeros(batch_size, num_nodes * self._hidden_dim).type_as(
-            inputs
-        )
-        for i in range(seq_len):
-            output, hidden_state = self.gru_cell(inputs[:, i, :], hidden_state)
-            output = output.reshape((batch_size, num_nodes, self._hidden_dim))
-            outputs.append(output)
-        last_output = outputs[-1]
-        return last_output
+        # batch size * seq length * num of nodes * feature dimension
+        batch_dim, seq_dim, input_dim, feature_dim = inputs.shape
+        # batch_size, seq_len, num_nodes = inputs.shape
+        assert self._input_dim == input_dim
+        # outputs = list()
+        # hidden_state = torch.zeros(batch_size, num_nodes * self._hidden_dim).type_as(
+        #     inputs
+        # )
+        # for i in range(seq_len):
+        #     output, hidden_state = self.gru_cell(inputs[:, i, :], hidden_state)
+        #     output = output.reshape((batch_size, num_nodes, self._hidden_dim))
+        #     outputs.append(output)
+        # last_output = outputs[-1]
+        # return last_output
 
     @staticmethod
     def add_model_specific_arguments(parent_parser):
@@ -104,4 +109,7 @@ class GRU(nn.Module):
 
     @property
     def hyperparameters(self):
-        return {"input_dim": self._input_dim, "hidden_dim": self._hidden_dim}
+        return {
+            "input_dim": self._input_dim, 
+            "hidden_dim": self._hidden_dim
+        }

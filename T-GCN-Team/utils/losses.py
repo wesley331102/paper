@@ -82,36 +82,77 @@ def nba_rmse_with_player_with_regularizer_loss(inputs, targets, model, team_2_pl
                         others = torch.tensor([t[j][3], t[j][4], t[j][5], t[j][6]])
                         com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean, team_2_mean, others), 0)
                     else:
-                        com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean, team_2_mean), 0)
-                    real_y = model.regressor(com)
+                        win_rate = torch.tensor([t[j][3]])
+                        com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean, team_2_mean, win_rate), 0)
+                    real_y = model.regressor1(com)
+                    real_y = model.regressor2(real_y)
                     # real_y = torch.tanh(model.regressor(com))*model.feat_max_val
-                    rmse_loss += torch.sqrt((real_y - t[j][2]) ** 2)
+
+                    # rmse_loss += torch.sqrt((real_y - t[j][2]) ** 2)
+                    # game += 1
+                    rmse_loss += ((real_y - t[j][2]) ** 2)
                     game += 1
-    else:
+    # else:
+    #     for i in range(leng):
+    #         inp = inputs[i]
+    #         t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
+    #         for j in range(t.shape[0]):
+    #             if t[j][0] != 0 and t[j][1] != [0]:
+    #                 team = torch.zeros(42, 64)
+    #                 team_1_list = team_2_player[int(t[j][0])]
+    #                 team_2_list = team_2_player[int(t[j][1])]
+    #                 y = 0
+    #                 z = 21
+    #                 for player in team_1_list:
+    #                     team[y] = inp[player]
+    #                     y += 1
+    #                 team[y] = inp[int(t[j][0])]
+    #                 for player in team_2_list:
+    #                     team[z] = inp[player]
+    #                     z += 1
+    #                 team[z] = inp[int(t[j][1])]
+    #                 com = torch.flatten(team)
+    #                 real_y = model.regressor1(com)
+    #                 real_y = model.regressor2(real_y)
+    #                 # real_y = torch.tanh(model.regressor(com))*model.feat_max_val
+    #                 rmse_loss += torch.sqrt((real_y - t[j][2]) ** 2)
+    #                 game += 1
+
+    rmse_loss = rmse_loss / game
+    rmse_loss = torch.sqrt(rmse_loss)
+    reg_loss = 0.0
+    for param in model.parameters():
+        reg_loss += torch.sum(param ** 2) / 2
+    reg_loss = lamda * reg_loss
+    return rmse_loss + reg_loss
+
+def nba_mae_with_player_with_regularizer_loss(inputs, targets, model, team_2_player, lamda=1.5e-3, isMean=True, using_other: bool=False):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    game = 0.0
+    rmse_loss = 0.0
+
+    if isMean:
         for i in range(leng):
             inp = inputs[i]
             t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
             for j in range(t.shape[0]):
                 if t[j][0] != 0 and t[j][1] != [0]:
-                    team = torch.zeros(42, 64)
                     team_1_list = team_2_player[int(t[j][0])]
                     team_2_list = team_2_player[int(t[j][1])]
-                    y = 0
-                    z = 21
-                    for player in team_1_list:
-                        team[y] = inp[player]
-                        y += 1
-                    team[y] = inp[int(t[j][0])]
-                    for player in team_2_list:
-                        team[z] = inp[player]
-                        z += 1
-                    team[z] = inp[int(t[j][1])]
-                    com = torch.flatten(team)
-                    real_y = model.regressor(com)
+                    team_1_mean = torch.mean(inp[team_1_list], dim=0)
+                    team_2_mean = torch.mean(inp[team_2_list], dim=0)
+                    if using_other:
+                        others = torch.tensor([t[j][3], t[j][4], t[j][5], t[j][6]])
+                        com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean, team_2_mean, others), 0)
+                    else:
+                        win_rate = torch.tensor([t[j][3]])
+                        com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean, team_2_mean, win_rate), 0)
+                    real_y = model.regressor1(com)
+                    real_y = model.regressor2(real_y)
                     # real_y = torch.tanh(model.regressor(com))*model.feat_max_val
                     rmse_loss += torch.sqrt((real_y - t[j][2]) ** 2)
                     game += 1
-
     rmse_loss = rmse_loss / game
     reg_loss = 0.0
     for param in model.parameters():
@@ -176,8 +217,9 @@ def nba_output_with_player(inputs, targets, model, team_2_player, isMean=True, u
                         others = torch.tensor([t[j][3], t[j][4], t[j][5], t[j][6]])
                         com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean, team_2_mean, others), 0)
                     else:
-                        com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean, team_2_mean), 0)
-                    p.append(model.regressor(com))
+                        win_rate = torch.tensor([t[j][3]])
+                        com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean, team_2_mean, win_rate), 0)
+                    p.append(model.regressor2(model.regressor1(com)))
                     # p.append(torch.tanh(model.regressor(com))*model.feat_max_val)
                     y.append(t[j][2])
     else:

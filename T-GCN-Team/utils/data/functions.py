@@ -51,9 +51,9 @@ def dict_to_list(data, using_other: bool=False):
                 res.append((0, 0, 0.0, 0.0, 0.0, 0.0, 0.0))
         else:
             for key in data_dict:
-                res.append((key[0], key[1],  data_dict[key]))
+                res.append((key[0], key[1],  data_dict[key][0], data_dict[key][1]))
             while len(res) != 15:
-                res.append((0, 0, 0.0))
+                res.append((0, 0, 0.0, 0.0))
         result.append(res)
     return result
 

@@ -50,8 +50,12 @@ class SupervisedForecastTask(pl.LightningModule):
                 #         self.model.hyperparameters.get("hidden_dim")*42,
                 #         1,
                 #     )
-                self.regressor = nn.Linear(
-                        self.model.hyperparameters.get("hidden_dim")*4,
+                self.regressor1 = nn.Linear(
+                        self.model.hyperparameters.get("hidden_dim")*4 + 1,
+                        8,
+                    )
+                self.regressor2 = nn.Linear(
+                        8,
                         1,
                     )
         else:
@@ -105,6 +109,11 @@ class SupervisedForecastTask(pl.LightningModule):
                 return utils.losses.nba_rmse_with_player_with_regularizer_loss(inputs, targets, self, self.team_2_player)
             else:
                 return utils.losses.nba_rmse_with_regularizer_loss(inputs, targets, self)
+        if self._loss == 'nba_mae':
+            if self.applying_player:
+                return utils.losses.nba_mae_with_player_with_regularizer_loss(inputs, targets, self, self.team_2_player)
+            else:
+                return utils.losses.nba_rmse_with_regularizer_loss(inputs, targets, self)
         if self._loss == 'nba_ce':
             return utils.losses.nba_cross_entropy_loss_with_player(inputs, targets, self, self.team_2_player)
             
@@ -122,7 +131,9 @@ class SupervisedForecastTask(pl.LightningModule):
         # y = y * self.feat_max_val
         loss = self.loss(predictions, y)
         # TODO
-        mean_error = utils.metrics.get_mean(0, y)
+        mse_mean, rmse_mean = utils.metrics.get_mean(0, y)
+        mse, rmse = utils.metrics.get_rmse(predictions, y, self, self.team_2_player)
+        mae = utils.metrics.get_mae(predictions, y, self, self.team_2_player)
         accr = utils.metrics.get_accuracy(predictions, y, self, self.team_2_player)
         # rmse = torch.sqrt(torchmetrics.functional.mean_squared_error(predictions, y))
         # mae = torchmetrics.functional.mean_absolute_error(predictions, y)
@@ -132,9 +143,9 @@ class SupervisedForecastTask(pl.LightningModule):
         metrics = {
             "val_loss_mse": loss,
             # "val_loss_cross_entropy": loss,
-            "mse_mean": mean_error,
-            # "RMSE": rmse,
-            # "MAE": mae,
+            "rmse_mean": rmse_mean,
+            "rmse": rmse,
+            "mae": mae,
             "accuracy": accr,
             # "R2": r2,
             # "ExplainedVar": explained_variance,

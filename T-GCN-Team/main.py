@@ -38,19 +38,39 @@ def get_callbacks(args):
 
 def main_supervised(args):
     dm = utils.data.SpatioTemporalCSVDataModule(
-        # feat_path=os.path.join('data', 'new_team_list.p'), 
-        # p_feat_path=os.path.join('data', 'new_player_list.p'),
-        feat_path=os.path.join('data', 'new_team_list_other_n.p'), 
-        p_feat_path=os.path.join('data', 'new_player_list_other_n.p'),
-        player_team_path=os.path.join('data', 'player_team_dict.p'),
-        y_path=os.path.join('data', 'team_list_y.p'), 
-        # y_path=os.path.join('data', 'team_list_y_with_other.p'), 
-        adj_path=os.path.join('data', 'team_adj.csv'), 
-        adj_1_path=os.path.join('data', 'pass_adj.csv'),
-        adj_2_path=os.path.join('data', 'ast_adj.csv'),
-        adj_3_path=os.path.join('data', 'def_adj.csv'),
-        adj_4_path=os.path.join('data', 'blk_adj.csv'),
-        adj_5_path=os.path.join('data', 'pf_adj.csv'),
+        # 17-18
+        # feat_path=os.path.join('data', 'new_team_list_other_n.p'), 
+        # p_feat_path=os.path.join('data', 'new_player_list_other_n.p'),
+        # player_team_path=os.path.join('data', 'player_team_dict.p'),
+        # y_path=os.path.join('data', 'team_list_y_win_rate.p'), 
+        # adj_path=os.path.join('data', 'team_adj.csv'), 
+        # adj_1_path=os.path.join('data', 'pass_adj.csv'),
+        # adj_2_path=os.path.join('data', 'ast_adj.csv'),
+        # adj_3_path=os.path.join('data', 'def_adj.csv'),
+        # adj_4_path=os.path.join('data', 'blk_adj.csv'),
+        # adj_5_path=os.path.join('data', 'pf_adj.csv'),
+        # 20-21
+        feat_path=os.path.join('data', '20_21', 'new_team_list_other_n.p'), 
+        p_feat_path=os.path.join('data', '20_21', 'new_player_list_other_n.p'),
+        player_team_path=os.path.join('data', '20_21', 'player_to_team_dict.p'),
+        y_path=os.path.join('data', '20_21', 'team_list_y_win_rate.p'), 
+        adj_path=os.path.join('data', '20_21', 'team_adj.csv'), 
+        adj_1_path=os.path.join('data', '20_21', 'pass_adj.csv'),
+        adj_2_path=os.path.join('data', '20_21', 'ast_adj.csv'),
+        adj_3_path=os.path.join('data', '20_21', 'def_adj.csv'),
+        adj_4_path=os.path.join('data', '20_21', 'blk_adj.csv'),
+        adj_5_path=os.path.join('data', '20_21', 'pf_adj.csv'),
+        # 21-22
+        # feat_path=os.path.join('data', '21_22', 'new_team_list_other_n.p'), 
+        # p_feat_path=os.path.join('data', '21_22', 'new_player_list_other_n.p'),
+        # player_team_path=os.path.join('data', '21_22', 'player_to_team_dict.p'),
+        # y_path=os.path.join('data', '21_22', 'team_list_y_win_rate.p'), 
+        # adj_path=os.path.join('data', '21_22', 'team_adj.csv'), 
+        # adj_1_path=os.path.join('data', '21_22', 'pass_adj.csv'),
+        # adj_2_path=os.path.join('data', '21_22', 'ast_adj.csv'),
+        # adj_3_path=os.path.join('data', '21_22', 'def_adj.csv'),
+        # adj_4_path=os.path.join('data', '21_22', 'blk_adj.csv'),
+        # adj_5_path=os.path.join('data', '21_22', 'pf_adj.csv'),
         **vars(args)
     )
     model = get_model(args, dm)

@@ -132,7 +132,7 @@ class RelationalGraphConvLayer(nn.Module):
         batch_dim, num_nodes, feature_dim = inputs.shape
         # batch size * num of player nodes * feature dimension
         inputs = inputs.reshape((batch_dim, num_nodes, feature_dim))
-        # batch_size * num of team nodes * input dimension
+        # batch size * num of player nodes * input dimension
         hidden_state = hidden_state.reshape(
             (batch_dim, num_nodes, self._input_dim)
         )
