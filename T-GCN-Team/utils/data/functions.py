@@ -57,6 +57,45 @@ def dict_to_list(data, using_other: bool=False):
         result.append(res)
     return result
 
+def dict_to_list_name(data):
+    result = list()
+    for data_dict in data:
+        res = list()    
+        for key in data_dict:
+            k1 = list()
+            k1.extend(data_dict[key][1])
+            while len(k1) != 15:
+                k1.append(-1) 
+            k2 = list() 
+            k2.extend(data_dict[key][2])
+            while len(k2) != 15:
+                k2.append(-1)  
+            all_ = list()
+            all_.append(key[0])
+            all_.append(key[1])
+            all_.append(data_dict[key][0])
+            all_.extend(k1)
+            all_.extend(k2)
+            res.append(all_)
+        z = list()
+        while len(z) != 33:
+            z.append(0)
+        while len(res) != 15:
+            res.append(z)
+        result.append(res)
+    return result
+
+def dict_to_list_score(data):
+    result = list()
+    for data_dict in data:
+        res = list()
+        for key in data_dict:
+            res.append((key[0], key[1],  data_dict[key][0], data_dict[key][1]))
+        while len(res) != 15:
+            res.append((0, 0, 0.0, 0.0))
+        result.append(res)
+    return result
+
 def generate_dataset(
     # data, seq_len, pre_len, time_len=None, split_ratio=0.8, normalize=True
     data, y, split_ratio=0.8, normalize=True
@@ -83,7 +122,9 @@ def generate_dataset(
     train_size = int(data_len * split_ratio)
     train_data = data[:train_size]
     test_data = data[train_size:data_len]
-    y = dict_to_list(y)
+    # y = dict_to_list(y)
+    # y = dict_to_list_score(y)
+    y = dict_to_list_name(y)
     train_y = y[:train_size]
     test_y = y[train_size:data_len]
     train_X, train_Y, test_X, test_Y = list(), list(), list(), list()

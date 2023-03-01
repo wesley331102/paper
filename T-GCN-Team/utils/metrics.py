@@ -42,7 +42,7 @@ def get_rmse(inputs, targets, model, team_2_player):
         inp = inputs[i]
         t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
         for j in range(t.shape[0]):
-            if t[j][0] != 0 and t[j][1] != [0]:
+            if t[j][0] != 0 or t[j][1] != 0:
                 team_1_list = team_2_player[int(t[j][0])]
                 team_2_list = team_2_player[int(t[j][1])]
                 team_1_mean = torch.mean(inp[team_1_list], dim=0)
@@ -56,6 +56,78 @@ def get_rmse(inputs, targets, model, team_2_player):
 
     return (s / num), (s / num) ** 0.5
 
+def get_rmse_name(inputs, targets, model, team_2_player):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    s = 0.0
+    num = 0.0
+    for i in range(leng):
+        inp = inputs[i]
+        t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
+        for j in range(t.shape[0]):
+            if t[j][0] != 0 or t[j][1] != 0:
+                team_1_list = t[j][3:18]
+                team_2_list = t[j][18:33]
+                team_1_list = [ elem for elem in team_1_list if elem != -1]
+                team_2_list = [ elem for elem in team_2_list if elem != -1]
+                team_1_list = [ int(i+30) for i in team_1_list]
+                team_2_list = [ int(i+30) for i in team_2_list]
+                if len(team_1_list) < 7 or len(team_2_list) < 7:
+                    continue
+                team_1_list_st = team_1_list[:5]
+                team_1_list_b = team_1_list[5:]
+                team_2_list_st = team_2_list[:5]
+                team_2_list_b = team_2_list[5:]
+                # team_1_mean_st = torch.mean(inp[team_1_list_st], dim=0)
+                # team_2_mean_st = torch.mean(inp[team_2_list_st], dim=0)
+                st11 = inp[team_1_list_st[0]]
+                st12 = inp[team_1_list_st[1]]
+                st13 = inp[team_1_list_st[2]]
+                st14 = inp[team_1_list_st[3]]
+                st15 = inp[team_1_list_st[4]]
+                st21 = inp[team_2_list_st[0]]
+                st22 = inp[team_2_list_st[1]]
+                st23 = inp[team_2_list_st[2]]
+                st24 = inp[team_2_list_st[3]]
+                st25 = inp[team_2_list_st[4]]
+                team_1_mean = torch.mean(inp[team_1_list_b], dim=0)
+                team_2_mean = torch.mean(inp[team_2_list_b], dim=0)
+                # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean_st, team_2_mean_st, team_1_mean, team_2_mean), 0)
+                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean), 0)
+                real_y = model.regressor1(com)
+                real_y = model.regressor2(real_y)
+                if False in torch.isnan(real_y):
+                    s += ((t[j][2] - real_y) ** 2)
+                    num += 1
+
+    return (s / num), (s / num) ** 0.5
+
+def get_rmse_score(inputs, targets, model, team_2_player):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    s = 0.0
+    num = 0.0
+    for i in range(leng):
+        inp = inputs[i]
+        t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
+        for j in range(t.shape[0]):
+            if t[j][0] != 0 or t[j][1] != 0:
+                team_1_list = team_2_player[int(t[j][0])]
+                team_2_list = team_2_player[int(t[j][1])]
+                team_1_mean = torch.mean(inp[team_1_list], dim=0)
+                team_2_mean = torch.mean(inp[team_2_list], dim=0)
+                team_1_score = torch.tensor([t[j][2]])
+                team_2_score = torch.tensor([t[j][3]])
+                com1 = torch.cat((inp[int(t[j][0])], team_1_mean), 0)
+                com2 = torch.cat((inp[int(t[j][1])], team_2_mean), 0)
+                real_y_1 = model.regressor(com1)
+                real_y_2 = model.regressor(com2)
+                s += ((real_y_1 - team_1_score) ** 2)
+                s += ((real_y_2 - team_2_score) ** 2)
+                num += 2
+
+    return (s / num), (s / num) ** 0.5
+
 def get_mae(inputs, targets, model, team_2_player):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
@@ -65,7 +137,7 @@ def get_mae(inputs, targets, model, team_2_player):
         inp = inputs[i]
         t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
         for j in range(t.shape[0]):
-            if t[j][0] != 0 and t[j][1] != [0]:
+            if t[j][0] != 0 or t[j][1] != 0:
                 team_1_list = team_2_player[int(t[j][0])]
                 team_2_list = team_2_player[int(t[j][1])]
                 team_1_mean = torch.mean(inp[team_1_list], dim=0)
@@ -79,6 +151,78 @@ def get_mae(inputs, targets, model, team_2_player):
 
     return (s / num)
 
+def get_mae_name(inputs, targets, model, team_2_player):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    s = 0.0
+    num = 0.0
+    for i in range(leng):
+        inp = inputs[i]
+        t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
+        for j in range(t.shape[0]):
+            if t[j][0] != 0 or t[j][1] != 0:
+                team_1_list = t[j][3:18]
+                team_2_list = t[j][18:33]
+                team_1_list = [ elem for elem in team_1_list if elem != -1]
+                team_2_list = [ elem for elem in team_2_list if elem != -1]
+                team_1_list = [ int(i+30) for i in team_1_list]
+                team_2_list = [ int(i+30) for i in team_2_list]
+                if len(team_1_list) < 7 or len(team_2_list) < 7:
+                    continue
+                team_1_list_st = team_1_list[:5]
+                team_1_list_b = team_1_list[5:]
+                team_2_list_st = team_2_list[:5]
+                team_2_list_b = team_2_list[5:]
+                # team_1_mean_st = torch.mean(inp[team_1_list_st], dim=0)
+                # team_2_mean_st = torch.mean(inp[team_2_list_st], dim=0)
+                st11 = inp[team_1_list_st[0]]
+                st12 = inp[team_1_list_st[1]]
+                st13 = inp[team_1_list_st[2]]
+                st14 = inp[team_1_list_st[3]]
+                st15 = inp[team_1_list_st[4]]
+                st21 = inp[team_2_list_st[0]]
+                st22 = inp[team_2_list_st[1]]
+                st23 = inp[team_2_list_st[2]]
+                st24 = inp[team_2_list_st[3]]
+                st25 = inp[team_2_list_st[4]]
+                team_1_mean = torch.mean(inp[team_1_list_b], dim=0)
+                team_2_mean = torch.mean(inp[team_2_list_b], dim=0)
+                # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean_st, team_2_mean_st, team_1_mean, team_2_mean), 0)
+                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean), 0)
+                real_y = model.regressor1(com)
+                real_y = model.regressor2(real_y)
+                if False in torch.isnan(real_y):
+                    s += torch.sqrt((t[j][2] - real_y) ** 2)
+                    num += 1
+
+    return (s / num)
+
+def get_mae_score(inputs, targets, model, team_2_player):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    s = 0.0
+    num = 0.0
+    for i in range(leng):
+        inp = inputs[i]
+        t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
+        for j in range(t.shape[0]):
+            if t[j][0] != 0 or t[j][1] != 0:
+                team_1_list = team_2_player[int(t[j][0])]
+                team_2_list = team_2_player[int(t[j][1])]
+                team_1_mean = torch.mean(inp[team_1_list], dim=0)
+                team_2_mean = torch.mean(inp[team_2_list], dim=0)
+                team_1_score = torch.tensor([t[j][2]])
+                team_2_score = torch.tensor([t[j][3]])
+                com1 = torch.cat((inp[int(t[j][0])], team_1_mean), 0)
+                com2 = torch.cat((inp[int(t[j][1])], team_2_mean), 0)
+                real_y_1 = model.regressor(com1)
+                real_y_2 = model.regressor(com2)
+                s += torch.sqrt((real_y_1 - team_1_score) ** 2)
+                s += torch.sqrt((real_y_2 - team_2_score) ** 2)
+                num += 2
+
+    return (s / num)
+
 def get_accuracy(inputs, targets, model, team_2_player):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
@@ -88,7 +232,7 @@ def get_accuracy(inputs, targets, model, team_2_player):
         inp = inputs[i]
         t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
         for j in range(t.shape[0]):
-            if t[j][0] != 0 and t[j][1] != [0]:
+            if t[j][0] != 0 or t[j][1] != 0:
                 team_1_list = team_2_player[int(t[j][0])]
                 team_2_list = team_2_player[int(t[j][1])]
                 team_1_mean = torch.mean(inp[team_1_list], dim=0)
@@ -100,6 +244,54 @@ def get_accuracy(inputs, targets, model, team_2_player):
                 if t[j][2]*real_y > 0:
                     right += 1
                 game += 1
+
+    right = right / game
+    return right
+
+def get_accuracy_name(inputs, targets, model, team_2_player):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    game = 0.0
+    right = 0.0
+    for i in range(leng):
+        inp = inputs[i]
+        t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
+        for j in range(t.shape[0]):
+            if t[j][0] != 0 or t[j][1] != 0:
+                team_1_list = t[j][3:18]
+                team_2_list = t[j][18:33]
+                team_1_list = [ elem for elem in team_1_list if elem != -1]
+                team_2_list = [ elem for elem in team_2_list if elem != -1]
+                team_1_list = [ int(i+30) for i in team_1_list]
+                team_2_list = [ int(i+30) for i in team_2_list]
+                if len(team_1_list) < 7 or len(team_2_list) < 7:
+                    continue
+                team_1_list_st = team_1_list[:5]
+                team_1_list_b = team_1_list[5:]
+                team_2_list_st = team_2_list[:5]
+                team_2_list_b = team_2_list[5:]
+                # team_1_mean_st = torch.mean(inp[team_1_list_st], dim=0)
+                # team_2_mean_st = torch.mean(inp[team_2_list_st], dim=0)
+                st11 = inp[team_1_list_st[0]]
+                st12 = inp[team_1_list_st[1]]
+                st13 = inp[team_1_list_st[2]]
+                st14 = inp[team_1_list_st[3]]
+                st15 = inp[team_1_list_st[4]]
+                st21 = inp[team_2_list_st[0]]
+                st22 = inp[team_2_list_st[1]]
+                st23 = inp[team_2_list_st[2]]
+                st24 = inp[team_2_list_st[3]]
+                st25 = inp[team_2_list_st[4]]
+                team_1_mean = torch.mean(inp[team_1_list_b], dim=0)
+                team_2_mean = torch.mean(inp[team_2_list_b], dim=0)
+                # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean_st, team_2_mean_st, team_1_mean, team_2_mean), 0)
+                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean), 0)
+                real_y = model.regressor1(com)
+                real_y = model.regressor2(real_y)
+                if False in torch.isnan(real_y):
+                    if t[j][2]*real_y > 0:
+                        right += 1
+                    game += 1
 
     right = right / game
     return right

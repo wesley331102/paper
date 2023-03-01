@@ -18,7 +18,9 @@ class SupervisedForecastTask(pl.LightningModule):
         learning_rate: float = 1e-3,
         weight_decay: float = 1.5e-3,
         feat_max_val: float = 1.0,
-        applying_player: bool = False,
+        applying_player: bool = True,
+        applying_score: bool = False,
+        # applying_score: bool = True,
         team_2_player: dict = {},
         t_dim: int = 0,
         p_dim: int = 0,
@@ -28,41 +30,35 @@ class SupervisedForecastTask(pl.LightningModule):
         print('\n================torch.cuda.is_available()======================', torch.cuda.is_available(), '\n')
         self.save_hyperparameters()
         self.model = model
-        # self.regressor = (
-        #     nn.Linear(
-        #         self.model.hyperparameters.get("hidden_dim")
-        #         or self.model.hyperparameters.get("output_dim"),
-        #         self.hparams.pre_len,
-        #     )
-        #     if regressor == "linear"
-        #     else regressor
-        # )
         self.applying_player = applying_player
         self.using_other = False
-        if self.applying_player:
-            if self.using_other:
-                self.regressor = nn.Linear(
-                        self.model.hyperparameters.get("hidden_dim")*4 + 4,
-                        1,
-                    )
-            else:
-                # self.regressor = nn.Linear(
-                #         self.model.hyperparameters.get("hidden_dim")*42,
-                #         1,
-                #     )
-                self.regressor1 = nn.Linear(
-                        self.model.hyperparameters.get("hidden_dim")*4 + 1,
-                        8,
-                    )
-                self.regressor2 = nn.Linear(
-                        8,
+        if applying_score:
+            self.regressor = nn.Linear(
+                        self.model.hyperparameters.get("hidden_dim")*2,
                         1,
                     )
         else:
-            self.regressor = nn.Linear(
-                    self.model.hyperparameters.get("hidden_dim")*2,
-                    1,
-                )
+            if self.applying_player:
+                if self.using_other:
+                    self.regressor = nn.Linear(
+                            self.model.hyperparameters.get("hidden_dim")*4 + 4,
+                            1,
+                        )
+                else:
+                    self.regressor1 = nn.Linear(
+                            # self.model.hyperparameters.get("hidden_dim")*6,
+                            self.model.hyperparameters.get("hidden_dim")*14,
+                            16,
+                        )
+                    self.regressor2 = nn.Linear(
+                            16,
+                            1,
+                        )
+            else:
+                self.regressor = nn.Linear(
+                        self.model.hyperparameters.get("hidden_dim")*2,
+                        1,
+                    )
         
         self._loss = loss
         self.feat_max_val = feat_max_val
@@ -111,11 +107,14 @@ class SupervisedForecastTask(pl.LightningModule):
                 return utils.losses.nba_rmse_with_regularizer_loss(inputs, targets, self)
         if self._loss == 'nba_mae':
             if self.applying_player:
-                return utils.losses.nba_mae_with_player_with_regularizer_loss(inputs, targets, self, self.team_2_player)
+                # return utils.losses.nba_mae_with_player_with_regularizer_loss(inputs, targets, self, self.team_2_player)
+                return utils.losses.nba_mae_with_player_with_regularizer_loss_name(inputs, targets, self, self.team_2_player)
             else:
                 return utils.losses.nba_rmse_with_regularizer_loss(inputs, targets, self)
         if self._loss == 'nba_ce':
             return utils.losses.nba_cross_entropy_loss_with_player(inputs, targets, self, self.team_2_player)
+        if self._loss == 'nba_score':
+            return utils.losses.nba_rmse_with_score_loss(inputs, targets, self, self.team_2_player)
             
         raise NameError("Loss not supported:", self._loss)
 
@@ -127,33 +126,31 @@ class SupervisedForecastTask(pl.LightningModule):
 
     def validation_step(self, batch, batch_idx):
         predictions, y = self.shared_step(batch, batch_idx)
-        # predictions = predictions * self.feat_max_val
-        # y = y * self.feat_max_val
         loss = self.loss(predictions, y)
-        # TODO
-        mse_mean, rmse_mean = utils.metrics.get_mean(0, y)
-        mse, rmse = utils.metrics.get_rmse(predictions, y, self, self.team_2_player)
-        mae = utils.metrics.get_mae(predictions, y, self, self.team_2_player)
-        accr = utils.metrics.get_accuracy(predictions, y, self, self.team_2_player)
-        # rmse = torch.sqrt(torchmetrics.functional.mean_squared_error(predictions, y))
-        # mae = torchmetrics.functional.mean_absolute_error(predictions, y)
-        # accuracy = utils.metrics.accuracy(predictions, y)
-        # r2 = utils.metrics.r2(predictions, y)
-        # explained_variance = utils.metrics.explained_variance(predictions, y)
+        # GCN
+        # mse_mean, rmse_mean = utils.metrics.get_mean(0, y)
+        # mse, rmse = utils.metrics.get_rmse(predictions, y, self, self.team_2_player)
+        # mae = utils.metrics.get_mae(predictions, y, self, self.team_2_player)
+        # accr = utils.metrics.get_accuracy(predictions, y, self, self.team_2_player)
+        # score
+        # mse, rmse = utils.metrics.get_rmse_score(predictions, y, self, self.team_2_player)
+        # mae = utils.metrics.get_mae_score(predictions, y, self, self.team_2_player)
+        # Name
+        mse, rmse = utils.metrics.get_rmse_name(predictions, y, self, self.team_2_player)
+        mae = utils.metrics.get_mae_name(predictions, y, self, self.team_2_player)
+        accr = utils.metrics.get_accuracy_name(predictions, y, self, self.team_2_player)
         metrics = {
             "val_loss_mse": loss,
-            # "val_loss_cross_entropy": loss,
-            "rmse_mean": rmse_mean,
+            # "rmse_mean": rmse_mean,
             "rmse": rmse,
             "mae": mae,
             "accuracy": accr,
-            # "R2": r2,
-            # "ExplainedVar": explained_variance,
         }
+        print('rmse: ', rmse, '=====', 'mae: ', mae, '=====', 'accr: ', accr, '=====')
         self.log_dict(metrics)
-        # p, real_y = utils.losses.nba_output(predictions, y, self)
-        p, real_y = utils.losses.nba_output_with_player(predictions, y, self, self.team_2_player)
-        # return predictions.reshape(batch[1].size()), y.reshape(batch[1].size())
+        # p, real_y = utils.losses.nba_output_with_player(predictions, y, self, self.team_2_player)
+        p, real_y = utils.losses.nba_output_with_player_name(predictions, y, self, self.team_2_player)
+        # p, real_y = utils.losses.nba_output_with_player_score(predictions, y, self, self.team_2_player)
         return p, real_y
 
     def test_step(self, batch, batch_idx):
