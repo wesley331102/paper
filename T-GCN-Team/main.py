@@ -17,6 +17,8 @@ def get_model(args, dm):
         model = models.GRU(input_dim=dm.adj.shape[0]+dm.adj_1.shape[0], hidden_dim=args.hidden_dim)
     if args.model_name == "BGCN":
         model = models.BGCN(adj=dm.adj, adj_1=dm.adj_1, adj_2=dm.adj_2, adj_3=dm.adj_3, adj_4=dm.adj_4, adj_5=dm.adj_5, feat=dm.feat, team_2_player=dm.player_2_team, aspect_num=args.aspect_num, hidden_dim=args.hidden_dim, co_attention_dim=args.co_attention_dim, linear_transformation=args.linear_transformation, applying_player=args.applying_player, applying_attention=args.applying_attention)
+    if args.model_name == "T2TGRU":
+        model = models.T2TGRU(hidden_dim=args.hidden_dim)
     return model
 
 def get_task(args, model, dm):
@@ -49,17 +51,30 @@ def main_supervised(args):
         # adj_3_path=os.path.join('data', 'def_adj.csv'),
         # adj_4_path=os.path.join('data', 'blk_adj.csv'),
         # adj_5_path=os.path.join('data', 'pf_adj.csv'),
-        # 19-20
-        feat_path=os.path.join('data', '19_20', 'new_team_list_other_n.p'), 
+        # T2T
+        feat_path=os.path.join('data', 'T2T', 'x_feat.p'), 
+        y_path=os.path.join('data', 'T2T', 'y_feat.p'), 
+        T2T=True,
+        # useless path
         p_feat_path=os.path.join('data', '19_20', 'new_player_list_other_n.p'),
         player_team_path=os.path.join('data', '19_20', 'player_to_team_dict.p'),
-        y_path=os.path.join('data', '19_20', 'team_list_y_namenum.p'), 
         adj_path=os.path.join('data', '19_20', 'team_adj.csv'), 
         adj_1_path=os.path.join('data', '19_20', 'pass_adj.csv'),
         adj_2_path=os.path.join('data', '19_20', 'ast_adj.csv'),
         adj_3_path=os.path.join('data', '19_20', 'def_adj.csv'),
         adj_4_path=os.path.join('data', '19_20', 'blk_adj.csv'),
         adj_5_path=os.path.join('data', '19_20', 'pf_adj.csv'),
+        # 19-20
+        # feat_path=os.path.join('data', '19_20', 'new_team_list_other_n.p'), 
+        # p_feat_path=os.path.join('data', '19_20', 'new_player_list_other_n.p'),
+        # player_team_path=os.path.join('data', '19_20', 'player_to_team_dict.p'),
+        # y_path=os.path.join('data', '19_20', 'team_list_y_namenum.p'), 
+        # adj_path=os.path.join('data', '19_20', 'team_adj.csv'), 
+        # adj_1_path=os.path.join('data', '19_20', 'pass_adj.csv'),
+        # adj_2_path=os.path.join('data', '19_20', 'ast_adj.csv'),
+        # adj_3_path=os.path.join('data', '19_20', 'def_adj.csv'),
+        # adj_4_path=os.path.join('data', '19_20', 'blk_adj.csv'),
+        # adj_5_path=os.path.join('data', '19_20', 'pf_adj.csv'),
         # 20-21
         # feat_path=os.path.join('data', '20_21', 'new_team_list_other_n.p'), 
         # p_feat_path=os.path.join('data', '20_21', 'new_player_list_other_n.p'),
@@ -110,7 +125,7 @@ if __name__ == "__main__":
         type=str,
         help="The name of the model for nba score difference prediction",
         # choices=("GCN", "GRU", "BGCN"),
-        choices=("BGCN", "GRU"),
+        choices=("BGCN", "GRU", "T2TGRU"),
         default="BGCN",
     )
     parser.add_argument(

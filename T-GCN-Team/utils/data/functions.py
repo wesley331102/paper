@@ -14,6 +14,10 @@ def load_features(feat_path, p_feature_path, dtype=np.float32):
     # feat_df = pd.read_csv(feat_path)
     # feat = np.array(feat_df, dtype=dtype)
     # return 
+
+def load_T2T_features(feat_path):
+    feat_df = pickle.load(open(feat_path, "rb"))
+    return feat_df
     
 def load_team_player_dict(path):
     res = pickle.load(open(path, "rb"))
@@ -25,6 +29,10 @@ def load_targets(target_path):
     # feat_df = pd.read_csv(feat_path)
     # feat = np.array(feat_df, dtype=dtype)
     # return feat
+
+def load_T2T_targets(target_path):
+    target_df = pickle.load(open(target_path, "rb"))
+    return target_df
 
 def load_y_max(target_path):
     max_y = -1.00
@@ -138,11 +146,50 @@ def generate_dataset(
         test_Y.append(np.array(test_y[i + seq_len : i + seq_len + pre_len]))
     return np.array(train_X), train_Y, np.array(test_X), test_Y
 
+def generate_dataset_T2T(
+    data, y, split_ratio=0.8, normalize=True
+):
+    data_len = data.shape[0]
+    if normalize:
+        for i in range(data.shape[2]):
+            m = np.max(data[:, :, i])
+            data[:, :, i] = data[:, :, i] / float(m)
+
+    train_size = int(data_len * split_ratio)
+    train_data = data[:train_size]
+    test_data = data[train_size:]
+    train_y = y[:train_size]
+    test_y = y[train_size:]
+    train_X, train_Y, test_X, test_Y = list(), list(), list(), list()
+    for i in range(train_size):
+        train_X.append(np.array(train_data[i, :5, :]))
+        train_Y.append(np.array(train_y[i, -1]))
+    for i in range(data_len-train_size):
+        test_X.append(np.array(test_data[i, :5, :]))
+        test_Y.append(np.array(test_y[i, -1]))
+    return np.array(train_X), np.array(train_Y), np.array(test_X), np.array(test_Y)
 
 def generate_torch_datasets(
     data, y, split_ratio=0.8, normalize=True
 ):
     train_X, train_Y, test_X, test_Y = generate_dataset(
+        data,
+        y, 
+        split_ratio=split_ratio,
+        normalize=normalize,
+    )
+    train_dataset = torch.utils.data.TensorDataset(
+        torch.FloatTensor(train_X), torch.FloatTensor(train_Y)
+    )
+    test_dataset = torch.utils.data.TensorDataset(
+        torch.FloatTensor(test_X), torch.FloatTensor(test_Y)
+    )
+    return train_dataset, test_dataset
+
+def generate_torch_datasets_T2T(
+    data, y, split_ratio=0.8, normalize=True
+):
+    train_X, train_Y, test_X, test_Y = generate_dataset_T2T(
         data,
         y, 
         split_ratio=split_ratio,
