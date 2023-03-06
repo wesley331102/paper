@@ -140,7 +140,6 @@ def generate_dataset(
 
 
 def generate_torch_datasets(
-    # data, seq_len, pre_len, time_len=None, split_ratio=0.8, normalize=True
     data, y, split_ratio=0.8, normalize=True
 ):
     train_X, train_Y, test_X, test_Y = generate_dataset(
