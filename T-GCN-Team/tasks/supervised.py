@@ -45,13 +45,23 @@ class SupervisedForecastTask(pl.LightningModule):
                             1,
                         )
                 else:
+                    # GCN
+                    # self.regressor1 = nn.Linear(
+                    #         # self.model.hyperparameters.get("hidden_dim")*6,
+                    #         self.model.hyperparameters.get("hidden_dim")*14,
+                    #         16,
+                    #     )
+                    # self.regressor2 = nn.Linear(
+                    #         16,
+                    #         1,
+                    #     )
+                    # T2T
                     self.regressor1 = nn.Linear(
-                            # self.model.hyperparameters.get("hidden_dim")*6,
-                            self.model.hyperparameters.get("hidden_dim")*14,
-                            16,
+                            self.model.hyperparameters.get("hidden_dim"),
+                            8,
                         )
                     self.regressor2 = nn.Linear(
-                            16,
+                            8,
                             1,
                         )
             else:
@@ -66,7 +76,7 @@ class SupervisedForecastTask(pl.LightningModule):
 
     def forward(self, x):
         # (batch_size, seq_len, num_nodes)
-        batch_size, _, num_nodes, feature_size = x.size()
+        # batch_size, _, num_nodes, feature_size = x.size()
         # (batch_size, num_nodes, hidden_dim)
         hidden = self.model(x)
         # modify
@@ -115,7 +125,9 @@ class SupervisedForecastTask(pl.LightningModule):
             return utils.losses.nba_cross_entropy_loss_with_player(inputs, targets, self, self.team_2_player)
         if self._loss == 'nba_score':
             return utils.losses.nba_rmse_with_score_loss(inputs, targets, self, self.team_2_player)
-            
+        if self._loss == 'nba_T2T':
+            return utils.losses.nba_mae_with_player_with_regularizer_loss_T2T(inputs, targets, self)    
+
         raise NameError("Loss not supported:", self._loss)
 
     def training_step(self, batch, batch_idx):
@@ -136,9 +148,13 @@ class SupervisedForecastTask(pl.LightningModule):
         # mse, rmse = utils.metrics.get_rmse_score(predictions, y, self, self.team_2_player)
         # mae = utils.metrics.get_mae_score(predictions, y, self, self.team_2_player)
         # Name
-        mse, rmse = utils.metrics.get_rmse_name(predictions, y, self, self.team_2_player)
-        mae = utils.metrics.get_mae_name(predictions, y, self, self.team_2_player)
-        accr = utils.metrics.get_accuracy_name(predictions, y, self, self.team_2_player)
+        # mse, rmse = utils.metrics.get_rmse_name(predictions, y, self, self.team_2_player)
+        # mae = utils.metrics.get_mae_name(predictions, y, self, self.team_2_player)
+        # accr = utils.metrics.get_accuracy_name(predictions, y, self, self.team_2_player)
+        # T2T
+        mse, rmse = utils.metrics.get_rmse_T2T(predictions, y, self)
+        mae = utils.metrics.get_mae_T2T(predictions, y, self)
+        accr = utils.metrics.get_accuracy_T2T(predictions, y, self)
         metrics = {
             "val_loss_mse": loss,
             # "rmse_mean": rmse_mean,
@@ -148,9 +164,14 @@ class SupervisedForecastTask(pl.LightningModule):
         }
         print('rmse: ', rmse, '=====', 'mae: ', mae, '=====', 'accr: ', accr, '=====')
         self.log_dict(metrics)
+        # GCN
         # p, real_y = utils.losses.nba_output_with_player(predictions, y, self, self.team_2_player)
-        p, real_y = utils.losses.nba_output_with_player_name(predictions, y, self, self.team_2_player)
+        # score
         # p, real_y = utils.losses.nba_output_with_player_score(predictions, y, self, self.team_2_player)
+        # Name
+        # p, real_y = utils.losses.nba_output_with_player_name(predictions, y, self, self.team_2_player)
+        # T2T
+        p, real_y = utils.losses.nba_output_with_player_T2T(predictions, y, self)
         return p, real_y
 
     def test_step(self, batch, batch_idx):

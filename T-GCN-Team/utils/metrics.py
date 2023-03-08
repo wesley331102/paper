@@ -102,6 +102,18 @@ def get_rmse_name(inputs, targets, model, team_2_player):
 
     return (s / num), (s / num) ** 0.5
 
+def get_rmse_T2T(inputs, targets, model):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    rmse_loss = 0.0
+
+    for i in range(leng):
+        real_y = model.regressor1(inputs[i])
+        real_y = model.regressor2(real_y)
+        rmse_loss += ((real_y - targets[i]) ** 2)
+
+    return (rmse_loss / leng), (rmse_loss / leng) ** 0.5
+
 def get_rmse_score(inputs, targets, model, team_2_player):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
@@ -196,6 +208,18 @@ def get_mae_name(inputs, targets, model, team_2_player):
                     num += 1
 
     return (s / num)
+
+def get_mae_T2T(inputs, targets, model):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    rmse_loss = 0.0
+
+    for i in range(leng):
+        real_y = model.regressor1(inputs[i])
+        real_y = model.regressor2(real_y)
+        rmse_loss += torch.sqrt((real_y - targets[i]) ** 2)
+
+    return (rmse_loss / leng)
 
 def get_mae_score(inputs, targets, model, team_2_player):
     assert inputs.shape[0] == targets.shape[0]
@@ -295,3 +319,20 @@ def get_accuracy_name(inputs, targets, model, team_2_player):
 
     right = right / game
     return right
+
+def get_accuracy_T2T(inputs, targets, model):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    right = 0.0
+    
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    right = 0.0
+
+    for i in range(leng):
+        real_y = model.regressor1(inputs[i])
+        real_y = model.regressor2(real_y)
+        if targets[i] * real_y > 0:
+            right += 1
+
+    return right / leng

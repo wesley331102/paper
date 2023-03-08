@@ -213,6 +213,23 @@ def nba_mae_with_player_with_regularizer_loss_name(inputs, targets, model, team_
     reg_loss = lamda * reg_loss
     return rmse_loss + reg_loss
 
+def nba_mae_with_player_with_regularizer_loss_T2T(inputs, targets, model, lamda=1.5e-3):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    rmse_loss = 0.0
+
+    for i in range(leng):
+        real_y = model.regressor1(inputs[i])
+        real_y = model.regressor2(real_y)
+        rmse_loss += torch.sqrt((real_y - targets[i]) ** 2)
+
+    rmse_loss = rmse_loss / leng
+    reg_loss = 0.0
+    for param in model.parameters():
+        reg_loss += torch.sum(param ** 2) / 2
+    reg_loss = lamda * reg_loss
+    return rmse_loss + reg_loss
+
 def nba_rmse_with_score_loss(inputs, targets, model, team_2_player, lamda=1.5e-3, isMean=True):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
@@ -376,6 +393,19 @@ def nba_output_with_player_name(inputs, targets, model, team_2_player):
                     p.append(r_y)
                     # p.append(torch.tanh(model.regressor(com))*model.feat_max_val)
                     y.append(t[j][2])
+    return p, y
+
+def nba_output_with_player_T2T(inputs, targets, model):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    p, y = list(), list()
+
+    for i in range(leng):
+        real_y = model.regressor1(inputs[i])
+        real_y = model.regressor2(real_y)
+        p.append(real_y)
+        y.append(targets[i])
+
     return p, y
 
 def nba_output_with_player_score(inputs, targets, model, team_2_player, using_other: bool=False):

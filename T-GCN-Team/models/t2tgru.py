@@ -96,10 +96,10 @@ class T2TGRU(nn.Module):
         self._hidden_dim = hidden_dim
         # linear transformation
         self._aspect_dim = aspect_dim
-        self.linear_transformation_offense = nn.Linear(10, self._aspect_dim)
-        self.linear_transformation_defend = nn.Linear(6, self._aspect_dim)
-        self.linear_transformation_error = nn.Linear(4, self._aspect_dim)
-        self.linear_transformation_influence = nn.Linear(4, self._aspect_dim)
+        self.linear_transformation_offense = nn.Linear(70, self._aspect_dim)
+        self.linear_transformation_defend = nn.Linear(42, self._aspect_dim)
+        self.linear_transformation_error = nn.Linear(28, self._aspect_dim)
+        self.linear_transformation_influence = nn.Linear(28, self._aspect_dim)
         self._feature_dim = self._aspect_dim * 4
         # GRU cell
         self.gru_cell = T2TGRUCell(self._feature_dim, self._hidden_dim)
@@ -123,10 +123,10 @@ class T2TGRU(nn.Module):
             inputs
         )
         # origin feature dimension * aspect dimension
-        offense_weight = self.mask_aspect(feature_dim, self.linear_transformation_offense.weight, [2, 5, 8, 9, 12, 22, 25, 28, 29, 32])
-        defend_weight = self.mask_aspect(feature_dim, self.linear_transformation_defend.weight, [10, 14, 15, 30, 34, 35])
-        error_weight = self.mask_aspect(feature_dim, self.linear_transformation_error.weight, [13, 17, 33, 37])
-        influence_weight = self.mask_aspect(feature_dim, self.linear_transformation_influence.weight, [18, 19, 38, 39])
+        offense_weight = self.mask_aspect(feature_dim, self.linear_transformation_offense.weight, [2, 5, 8, 9, 12, 22, 25, 28, 29, 32, 42, 45, 48, 49, 52, 62, 65, 68, 69, 72, 82, 85, 88, 89, 92, 102, 105, 108, 109, 112, 122, 125, 128, 129, 132, 142, 145, 148, 149, 152, 162, 165, 168, 169, 172, 182, 185, 188, 189, 192, 202, 205, 208, 209, 212, 222, 225, 228, 229, 232, 242, 245, 248, 249, 252, 262, 265, 268, 269, 272])
+        defend_weight = self.mask_aspect(feature_dim, self.linear_transformation_defend.weight, [10, 14, 15, 30, 34, 35, 50, 54, 55, 70, 74, 75, 90, 94, 95, 110, 114, 115, 130, 134, 135, 150, 154, 155, 170, 174, 175, 190, 194, 195, 210, 214, 215, 230, 234, 235, 250, 254, 255, 270, 274, 275])
+        error_weight = self.mask_aspect(feature_dim, self.linear_transformation_error.weight, [13, 17, 33, 37, 53, 57, 73, 77, 93, 97, 113, 117, 133, 137, 153, 157, 173, 177, 193, 197, 213, 217, 233, 237, 253, 257, 273, 277])
+        influence_weight = self.mask_aspect(feature_dim, self.linear_transformation_influence.weight, [18, 19, 38, 39, 58, 59, 78, 79, 98, 99, 118, 119, 138, 139, 158, 159, 178, 179, 198, 199, 218, 219, 238, 239, 258, 259, 278, 279])
         # origin feature dimension * feature dimension
         aspect_weight = torch.cat((offense_weight, defend_weight, error_weight, influence_weight), dim=1)
         # feature dimension
