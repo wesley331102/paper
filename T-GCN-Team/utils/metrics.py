@@ -272,7 +272,7 @@ def get_accuracy(inputs, targets, model, team_2_player):
     right = right / game
     return right
 
-def get_accuracy_name(inputs, targets, model, team_2_player):
+def get_accuracy_name(inputs, targets, model, threshold = 15):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
     game = 0.0
@@ -312,13 +312,12 @@ def get_accuracy_name(inputs, targets, model, team_2_player):
                 com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean), 0)
                 real_y = model.regressor1(com)
                 real_y = model.regressor2(real_y)
-                if False in torch.isnan(real_y):
+                if False in torch.isnan(real_y) and (torch.abs(real_y) > threshold):
                     if t[j][2]*real_y > 0:
                         right += 1
                     game += 1
 
-    right = right / game
-    return right
+    return 0 if game == 0 else right / game
 
 def get_accuracy_T2T(inputs, targets, model):
     assert inputs.shape[0] == targets.shape[0]

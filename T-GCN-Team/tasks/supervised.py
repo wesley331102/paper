@@ -46,24 +46,24 @@ class SupervisedForecastTask(pl.LightningModule):
                         )
                 else:
                     # GCN
-                    # self.regressor1 = nn.Linear(
-                    #         # self.model.hyperparameters.get("hidden_dim")*6,
-                    #         self.model.hyperparameters.get("hidden_dim")*14,
-                    #         16,
-                    #     )
-                    # self.regressor2 = nn.Linear(
-                    #         16,
-                    #         1,
-                    #     )
-                    # T2T
                     self.regressor1 = nn.Linear(
-                            self.model.hyperparameters.get("hidden_dim"),
-                            8,
+                            # self.model.hyperparameters.get("hidden_dim")*6,
+                            self.model.hyperparameters.get("hidden_dim")*14,
+                            64,
                         )
                     self.regressor2 = nn.Linear(
-                            8,
+                            64,
                             1,
                         )
+                    # T2T
+                    # self.regressor1 = nn.Linear(
+                    #         self.model.hyperparameters.get("hidden_dim"),
+                    #         8,
+                    #     )
+                    # self.regressor2 = nn.Linear(
+                    #         8,
+                    #         1,
+                    #     )
             else:
                 self.regressor = nn.Linear(
                         self.model.hyperparameters.get("hidden_dim")*2,
@@ -148,13 +148,13 @@ class SupervisedForecastTask(pl.LightningModule):
         # mse, rmse = utils.metrics.get_rmse_score(predictions, y, self, self.team_2_player)
         # mae = utils.metrics.get_mae_score(predictions, y, self, self.team_2_player)
         # Name
-        # mse, rmse = utils.metrics.get_rmse_name(predictions, y, self, self.team_2_player)
-        # mae = utils.metrics.get_mae_name(predictions, y, self, self.team_2_player)
-        # accr = utils.metrics.get_accuracy_name(predictions, y, self, self.team_2_player)
+        mse, rmse = utils.metrics.get_rmse_name(predictions, y, self, self.team_2_player)
+        mae = utils.metrics.get_mae_name(predictions, y, self, self.team_2_player)
+        accr = utils.metrics.get_accuracy_name(predictions, y, self)
         # T2T
-        mse, rmse = utils.metrics.get_rmse_T2T(predictions, y, self)
-        mae = utils.metrics.get_mae_T2T(predictions, y, self)
-        accr = utils.metrics.get_accuracy_T2T(predictions, y, self)
+        # mse, rmse = utils.metrics.get_rmse_T2T(predictions, y, self)
+        # mae = utils.metrics.get_mae_T2T(predictions, y, self)
+        # accr = utils.metrics.get_accuracy_T2T(predictions, y, self)
         metrics = {
             "val_loss_mse": loss,
             # "rmse_mean": rmse_mean,
@@ -169,9 +169,9 @@ class SupervisedForecastTask(pl.LightningModule):
         # score
         # p, real_y = utils.losses.nba_output_with_player_score(predictions, y, self, self.team_2_player)
         # Name
-        # p, real_y = utils.losses.nba_output_with_player_name(predictions, y, self, self.team_2_player)
+        p, real_y = utils.losses.nba_output_with_player_name(predictions, y, self, self.team_2_player)
         # T2T
-        p, real_y = utils.losses.nba_output_with_player_T2T(predictions, y, self)
+        # p, real_y = utils.losses.nba_output_with_player_T2T(predictions, y, self)
         return p, real_y
 
     def test_step(self, batch, batch_idx):
