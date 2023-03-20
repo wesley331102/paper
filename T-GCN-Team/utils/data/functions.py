@@ -84,9 +84,13 @@ def dict_to_list_name(data):
             all_.append(data_dict[key][0])
             all_.extend(k1)
             all_.extend(k2)
+            # delete
+            all_.extend(data_dict[key][3])
+            all_.extend(data_dict[key][4])
             res.append(all_)
         z = list()
-        while len(z) != 33:
+        # while len(z) != 33:
+        while len(z) != 73:
             z.append(0)
         while len(res) != 15:
             res.append(z)

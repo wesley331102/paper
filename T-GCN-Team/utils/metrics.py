@@ -92,8 +92,19 @@ def get_rmse_name(inputs, targets, model, team_2_player):
                 st25 = inp[team_2_list_st[4]]
                 team_1_mean = torch.mean(inp[team_1_list_b], dim=0)
                 team_2_mean = torch.mean(inp[team_2_list_b], dim=0)
+                # delete
+                team_1_ave = t[j][33:53]
+                team_2_ave = t[j][53:73]
+                ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
+                ew = model.mask_aspect(20, model.lt2.weight, [10, 14, 15], 16)
+                dw = model.mask_aspect(20, model.lt3.weight, [13, 17], 16)
+                iw = model.mask_aspect(20, model.lt4.weight, [19], 16)
+                aw = torch.cat((ow, ew, dw, iw), dim=1)
+                ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
+                team_1_ave_inputs = team_1_ave @ aw + ab
+                team_2_ave_inputs = team_2_ave @ aw + ab
                 # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean_st, team_2_mean_st, team_1_mean, team_2_mean), 0)
-                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean), 0)
+                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
                 real_y = model.regressor1(com)
                 real_y = model.regressor2(real_y)
                 if False in torch.isnan(real_y):
@@ -199,8 +210,19 @@ def get_mae_name(inputs, targets, model, team_2_player):
                 st25 = inp[team_2_list_st[4]]
                 team_1_mean = torch.mean(inp[team_1_list_b], dim=0)
                 team_2_mean = torch.mean(inp[team_2_list_b], dim=0)
+                # delete
+                team_1_ave = t[j][33:53]
+                team_2_ave = t[j][53:73]
+                ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
+                ew = model.mask_aspect(20, model.lt2.weight, [10, 14, 15], 16)
+                dw = model.mask_aspect(20, model.lt3.weight, [13, 17], 16)
+                iw = model.mask_aspect(20, model.lt4.weight, [19], 16)
+                aw = torch.cat((ow, ew, dw, iw), dim=1)
+                ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
+                team_1_ave_inputs = team_1_ave @ aw + ab
+                team_2_ave_inputs = team_2_ave @ aw + ab
                 # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean_st, team_2_mean_st, team_1_mean, team_2_mean), 0)
-                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean), 0)
+                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
                 real_y = model.regressor1(com)
                 real_y = model.regressor2(real_y)
                 if False in torch.isnan(real_y):
@@ -272,7 +294,7 @@ def get_accuracy(inputs, targets, model, team_2_player):
     right = right / game
     return right
 
-def get_accuracy_name(inputs, targets, model, threshold = 15):
+def get_accuracy_name(inputs, targets, model, threshold = 0):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
     game = 0.0
@@ -308,8 +330,19 @@ def get_accuracy_name(inputs, targets, model, threshold = 15):
                 st25 = inp[team_2_list_st[4]]
                 team_1_mean = torch.mean(inp[team_1_list_b], dim=0)
                 team_2_mean = torch.mean(inp[team_2_list_b], dim=0)
+                # delete
+                team_1_ave = t[j][33:53]
+                team_2_ave = t[j][53:73]
+                ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
+                ew = model.mask_aspect(20, model.lt2.weight, [10, 14, 15], 16)
+                dw = model.mask_aspect(20, model.lt3.weight, [13, 17], 16)
+                iw = model.mask_aspect(20, model.lt4.weight, [19], 16)
+                aw = torch.cat((ow, ew, dw, iw), dim=1)
+                ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
+                team_1_ave_inputs = team_1_ave @ aw + ab
+                team_2_ave_inputs = team_2_ave @ aw + ab
                 # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean_st, team_2_mean_st, team_1_mean, team_2_mean), 0)
-                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean), 0)
+                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
                 real_y = model.regressor1(com)
                 real_y = model.regressor2(real_y)
                 if False in torch.isnan(real_y) and (torch.abs(real_y) > threshold):
@@ -317,6 +350,7 @@ def get_accuracy_name(inputs, targets, model, threshold = 15):
                         right += 1
                     game += 1
 
+    # print("=============game==============", game)
     return 0 if game == 0 else right / game
 
 def get_accuracy_T2T(inputs, targets, model):

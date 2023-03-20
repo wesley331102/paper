@@ -32,6 +32,7 @@ class SupervisedForecastTask(pl.LightningModule):
         self.model = model
         self.applying_player = applying_player
         self.using_other = False
+        self.using_average = True
         if applying_score:
             self.regressor = nn.Linear(
                         self.model.hyperparameters.get("hidden_dim")*2,
@@ -48,13 +49,18 @@ class SupervisedForecastTask(pl.LightningModule):
                     # GCN
                     self.regressor1 = nn.Linear(
                             # self.model.hyperparameters.get("hidden_dim")*6,
-                            self.model.hyperparameters.get("hidden_dim")*14,
+                            self.model.hyperparameters.get("hidden_dim")*16,
                             64,
                         )
                     self.regressor2 = nn.Linear(
                             64,
                             1,
                         )
+                    if self.using_average:
+                        self.lt1 = nn.Linear(5, 16)
+                        self.lt2 = nn.Linear(3, 16)
+                        self.lt3 = nn.Linear(2, 16)
+                        self.lt4 = nn.Linear(1, 16)
                     # T2T
                     # self.regressor1 = nn.Linear(
                     #         self.model.hyperparameters.get("hidden_dim"),
@@ -73,6 +79,15 @@ class SupervisedForecastTask(pl.LightningModule):
         self._loss = loss
         self.feat_max_val = feat_max_val
         self.team_2_player = dict_processing_loss(team_2_player, t_dim, p_dim)
+
+    def mask_aspect(self, feature_dim, weight, feature_index, aspect_dim):
+        aspect_weight = weight.transpose(0, 1)
+        mask_vector = torch.zeros(feature_dim, aspect_dim)
+        weight_index = 0
+        for i in feature_index:
+            mask_vector[i] = aspect_weight[weight_index]
+            weight_index += 1
+        return mask_vector
 
     def forward(self, x):
         # (batch_size, seq_len, num_nodes)
