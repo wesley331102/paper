@@ -56,7 +56,7 @@ def get_rmse(inputs, targets, model, team_2_player):
 
     return (s / num), (s / num) ** 0.5
 
-def get_rmse_name(inputs, targets, model, team_2_player):
+def get_rmse_name(inputs, targets, model):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
     s = 0.0
@@ -78,8 +78,6 @@ def get_rmse_name(inputs, targets, model, team_2_player):
                 team_1_list_b = team_1_list[5:]
                 team_2_list_st = team_2_list[:5]
                 team_2_list_b = team_2_list[5:]
-                # team_1_mean_st = torch.mean(inp[team_1_list_st], dim=0)
-                # team_2_mean_st = torch.mean(inp[team_2_list_st], dim=0)
                 st11 = inp[team_1_list_st[0]]
                 st12 = inp[team_1_list_st[1]]
                 st13 = inp[team_1_list_st[2]]
@@ -103,10 +101,14 @@ def get_rmse_name(inputs, targets, model, team_2_player):
                 ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
                 team_1_ave_inputs = team_1_ave @ aw + ab
                 team_2_ave_inputs = team_2_ave @ aw + ab
-                # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean_st, team_2_mean_st, team_1_mean, team_2_mean), 0)
                 com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
                 real_y = model.regressor1(com)
+                real_y = model.dropoutLayer1(real_y)
                 real_y = model.regressor2(real_y)
+                real_y = model.dropoutLayer2(real_y)
+                real_y = model.regressor3(real_y)
+                real_y = model.dropoutLayer3(real_y)
+                real_y = model.regressor4(real_y)
                 if False in torch.isnan(real_y):
                     s += ((t[j][2] - real_y) ** 2)
                     num += 1
@@ -174,7 +176,7 @@ def get_mae(inputs, targets, model, team_2_player):
 
     return (s / num)
 
-def get_mae_name(inputs, targets, model, team_2_player):
+def get_mae_name(inputs, targets, model):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
     s = 0.0
@@ -196,8 +198,6 @@ def get_mae_name(inputs, targets, model, team_2_player):
                 team_1_list_b = team_1_list[5:]
                 team_2_list_st = team_2_list[:5]
                 team_2_list_b = team_2_list[5:]
-                # team_1_mean_st = torch.mean(inp[team_1_list_st], dim=0)
-                # team_2_mean_st = torch.mean(inp[team_2_list_st], dim=0)
                 st11 = inp[team_1_list_st[0]]
                 st12 = inp[team_1_list_st[1]]
                 st13 = inp[team_1_list_st[2]]
@@ -221,10 +221,14 @@ def get_mae_name(inputs, targets, model, team_2_player):
                 ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
                 team_1_ave_inputs = team_1_ave @ aw + ab
                 team_2_ave_inputs = team_2_ave @ aw + ab
-                # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean_st, team_2_mean_st, team_1_mean, team_2_mean), 0)
                 com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
                 real_y = model.regressor1(com)
+                real_y = model.dropoutLayer1(real_y)
                 real_y = model.regressor2(real_y)
+                real_y = model.dropoutLayer2(real_y)
+                real_y = model.regressor3(real_y)
+                real_y = model.dropoutLayer3(real_y)
+                real_y = model.regressor4(real_y)
                 if False in torch.isnan(real_y):
                     s += torch.sqrt((t[j][2] - real_y) ** 2)
                     num += 1
@@ -316,8 +320,6 @@ def get_accuracy_name(inputs, targets, model, threshold = 0):
                 team_1_list_b = team_1_list[5:]
                 team_2_list_st = team_2_list[:5]
                 team_2_list_b = team_2_list[5:]
-                # team_1_mean_st = torch.mean(inp[team_1_list_st], dim=0)
-                # team_2_mean_st = torch.mean(inp[team_2_list_st], dim=0)
                 st11 = inp[team_1_list_st[0]]
                 st12 = inp[team_1_list_st[1]]
                 st13 = inp[team_1_list_st[2]]
@@ -341,16 +343,19 @@ def get_accuracy_name(inputs, targets, model, threshold = 0):
                 ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
                 team_1_ave_inputs = team_1_ave @ aw + ab
                 team_2_ave_inputs = team_2_ave @ aw + ab
-                # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], team_1_mean_st, team_2_mean_st, team_1_mean, team_2_mean), 0)
                 com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
                 real_y = model.regressor1(com)
+                real_y = model.dropoutLayer1(real_y)
                 real_y = model.regressor2(real_y)
+                real_y = model.dropoutLayer2(real_y)
+                real_y = model.regressor3(real_y)
+                real_y = model.dropoutLayer3(real_y)
+                real_y = model.regressor4(real_y)
                 if False in torch.isnan(real_y) and (torch.abs(real_y) > threshold):
                     if t[j][2]*real_y > 0:
                         right += 1
                     game += 1
 
-    # print("=============game==============", game)
     return 0 if game == 0 else right / game
 
 def get_accuracy_T2T(inputs, targets, model):

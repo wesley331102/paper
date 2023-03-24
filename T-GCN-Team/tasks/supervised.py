@@ -47,15 +47,35 @@ class SupervisedForecastTask(pl.LightningModule):
                         )
                 else:
                     # GCN
+                    # self.regressor1 = nn.Linear(
+                    #         # self.model.hyperparameters.get("hidden_dim")*6,
+                    #         self.model.hyperparameters.get("hidden_dim")*16,
+                    #         64,
+                    #     )
+                    # self.regressor2 = nn.Linear(
+                    #         64,
+                    #         1,
+                    #     )
                     self.regressor1 = nn.Linear(
-                            # self.model.hyperparameters.get("hidden_dim")*6,
-                            self.model.hyperparameters.get("hidden_dim")*16,
-                            64,
-                        )
+                        # self.model.hyperparameters.get("hidden_dim")*6,
+                        self.model.hyperparameters.get("hidden_dim")*16,
+                        256,
+                    )
                     self.regressor2 = nn.Linear(
-                            64,
-                            1,
-                        )
+                        256,
+                        64,
+                    )
+                    self.regressor3 = nn.Linear(
+                        64,
+                        8,
+                    )
+                    self.regressor4 = nn.Linear(
+                        8,
+                        1,
+                    )
+                    self.dropoutLayer1 = nn.Dropout(0.2)
+                    self.dropoutLayer2 = nn.Dropout(0.2)
+                    self.dropoutLayer3 = nn.Dropout(0.2)
                     if self.using_average:
                         self.lt1 = nn.Linear(5, 16)
                         self.lt2 = nn.Linear(3, 16)
@@ -133,7 +153,7 @@ class SupervisedForecastTask(pl.LightningModule):
         if self._loss == 'nba_mae':
             if self.applying_player:
                 # return utils.losses.nba_mae_with_player_with_regularizer_loss(inputs, targets, self, self.team_2_player)
-                return utils.losses.nba_mae_with_player_with_regularizer_loss_name(inputs, targets, self, self.team_2_player)
+                return utils.losses.nba_mae_with_player_with_regularizer_loss_name(inputs, targets, self)
             else:
                 return utils.losses.nba_rmse_with_regularizer_loss(inputs, targets, self)
         if self._loss == 'nba_ce':
@@ -163,8 +183,8 @@ class SupervisedForecastTask(pl.LightningModule):
         # mse, rmse = utils.metrics.get_rmse_score(predictions, y, self, self.team_2_player)
         # mae = utils.metrics.get_mae_score(predictions, y, self, self.team_2_player)
         # Name
-        mse, rmse = utils.metrics.get_rmse_name(predictions, y, self, self.team_2_player)
-        mae = utils.metrics.get_mae_name(predictions, y, self, self.team_2_player)
+        mse, rmse = utils.metrics.get_rmse_name(predictions, y, self)
+        mae = utils.metrics.get_mae_name(predictions, y, self)
         accr = utils.metrics.get_accuracy_name(predictions, y, self)
         # T2T
         # mse, rmse = utils.metrics.get_rmse_T2T(predictions, y, self)
@@ -184,7 +204,7 @@ class SupervisedForecastTask(pl.LightningModule):
         # score
         # p, real_y = utils.losses.nba_output_with_player_score(predictions, y, self, self.team_2_player)
         # Name
-        p, real_y = utils.losses.nba_output_with_player_name(predictions, y, self, self.team_2_player)
+        p, real_y = utils.losses.nba_output_with_player_name(predictions, y, self)
         # T2T
         # p, real_y = utils.losses.nba_output_with_player_T2T(predictions, y, self)
         return p, real_y
