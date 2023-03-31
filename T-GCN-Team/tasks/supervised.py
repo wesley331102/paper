@@ -73,9 +73,9 @@ class SupervisedForecastTask(pl.LightningModule):
                         8,
                         1,
                     )
-                    self.dropoutLayer1 = nn.Dropout(0.2)
-                    self.dropoutLayer2 = nn.Dropout(0.2)
-                    self.dropoutLayer3 = nn.Dropout(0.2)
+                    # self.dropoutLayer1 = nn.Dropout(0.6)
+                    # self.dropoutLayer2 = nn.Dropout(0.6)
+                    # self.dropoutLayer3 = nn.Dropout(0.6)
                     if self.using_average:
                         self.lt1 = nn.Linear(5, 16)
                         self.lt2 = nn.Linear(3, 16)
@@ -186,6 +186,7 @@ class SupervisedForecastTask(pl.LightningModule):
         mse, rmse = utils.metrics.get_rmse_name(predictions, y, self)
         mae = utils.metrics.get_mae_name(predictions, y, self)
         accr = utils.metrics.get_accuracy_name(predictions, y, self)
+        gain = utils.metrics.get_return(predictions, y, self)
         # T2T
         # mse, rmse = utils.metrics.get_rmse_T2T(predictions, y, self)
         # mae = utils.metrics.get_mae_T2T(predictions, y, self)
@@ -196,8 +197,10 @@ class SupervisedForecastTask(pl.LightningModule):
             "rmse": rmse,
             "mae": mae,
             "accuracy": accr,
+            "gain": gain,
         }
-        print('rmse: ', rmse, '=====', 'mae: ', mae, '=====', 'accr: ', accr, '=====')
+        print('rmse: ', rmse, '=====', 'mae: ', mae, '=====', 'accr: ', accr, '=====', 'gain: ', gain, '=====')
+        print('1: ', utils.metrics.get_return(predictions, y, self, 1), '=====', '2: ', utils.metrics.get_return(predictions, y, self, 2), '=====', '3: ', utils.metrics.get_return(predictions, y, self, 3), '=====', '4: ', utils.metrics.get_return(predictions, y, self, 4), "=====", "5: ", utils.metrics.get_return(predictions, y, self, 5))
         self.log_dict(metrics)
         # GCN
         # p, real_y = utils.losses.nba_output_with_player(predictions, y, self, self.team_2_player)

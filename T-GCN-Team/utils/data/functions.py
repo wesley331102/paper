@@ -87,10 +87,13 @@ def dict_to_list_name(data):
             # delete
             all_.extend(data_dict[key][3])
             all_.extend(data_dict[key][4])
+            # odds
+            all_.append(data_dict[key][5])
+            all_.append(data_dict[key][6])
             res.append(all_)
         z = list()
         # while len(z) != 33:
-        while len(z) != 73:
+        while len(z) != 75:
             z.append(0)
         while len(res) != 15:
             res.append(z)

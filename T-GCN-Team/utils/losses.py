@@ -161,11 +161,11 @@ def nba_mae_with_player_with_regularizer_loss_name(inputs, targets, model, lamda
                 team_2_ave_inputs = team_2_ave @ aw + ab
                 com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
                 real_y = model.regressor1(com)
-                real_y = model.dropoutLayer1(real_y)
+                # real_y = model.dropoutLayer1(real_y)
                 real_y = model.regressor2(real_y)
-                real_y = model.dropoutLayer2(real_y)
+                # real_y = model.dropoutLayer2(real_y)
                 real_y = model.regressor3(real_y)
-                real_y = model.dropoutLayer3(real_y)
+                # real_y = model.dropoutLayer3(real_y)
                 real_y = model.regressor4(real_y)
                 if False in torch.isnan(real_y):
                     rmse_loss += torch.sqrt((real_y - t[j][2]) ** 2)
@@ -358,11 +358,11 @@ def nba_output_with_player_name(inputs, targets, model):
                 team_2_ave_inputs = team_2_ave @ aw + ab
                 com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
                 r_y = model.regressor1(com)
-                r_y = model.dropoutLayer1(r_y)
+                # r_y = model.dropoutLayer1(r_y)
                 r_y = model.regressor2(r_y)
-                r_y = model.dropoutLayer2(r_y)
+                # r_y = model.dropoutLayer2(r_y)
                 r_y = model.regressor3(r_y)
-                r_y = model.dropoutLayer3(r_y)
+                # r_y = model.dropoutLayer3(r_y)
                 r_y = model.regressor4(r_y)
                 if False in torch.isnan(r_y):
                     p.append(r_y)

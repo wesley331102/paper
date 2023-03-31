@@ -93,7 +93,7 @@ def main_supervised(args):
         # y_path=os.path.join('data', '21_22', 'team_list_y_win_rate.p'), 
         # y_path=os.path.join('data', '21_22', 'team_list_y_score.p'), 
         # y_path=os.path.join('data', '21_22', 'team_list_y_namenum.p'), 
-        y_path=os.path.join('data', '21_22', 'team_list_y_namenum_ave.p'), 
+        y_path=os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p'), 
         adj_path=os.path.join('data', '21_22', 'team_adj.csv'), 
         adj_1_path=os.path.join('data', '21_22', 'pass_adj.csv'),
         adj_2_path=os.path.join('data', '21_22', 'ast_adj.csv'),
