@@ -102,6 +102,14 @@ def get_rmse_name(inputs, targets, model):
                 team_1_ave_inputs = team_1_ave @ aw + ab
                 team_2_ave_inputs = team_2_ave @ aw + ab
                 com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
+                
+                # self attention
+                # com = model.attentionLayer(com)
+                # output attention
+                com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), team_1_ave_inputs)
+                com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), team_2_ave_inputs)
+                com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
+
                 real_y = model.regressor1(com)
                 # real_y = model.dropoutLayer1(real_y)
                 real_y = model.regressor2(real_y)
@@ -222,6 +230,14 @@ def get_mae_name(inputs, targets, model):
                 team_1_ave_inputs = team_1_ave @ aw + ab
                 team_2_ave_inputs = team_2_ave @ aw + ab
                 com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
+                
+                # self attention
+                # com = model.attentionLayer(com)
+                # output attention
+                com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), team_1_ave_inputs)
+                com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), team_2_ave_inputs)
+                com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
+
                 real_y = model.regressor1(com)
                 # real_y = model.dropoutLayer1(real_y)
                 real_y = model.regressor2(real_y)
@@ -344,6 +360,14 @@ def get_accuracy_name(inputs, targets, model, threshold = 0):
                 team_1_ave_inputs = team_1_ave @ aw + ab
                 team_2_ave_inputs = team_2_ave @ aw + ab
                 com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
+                
+                # self attention
+                # com = model.attentionLayer(com)
+                # output attention
+                com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), team_1_ave_inputs)
+                com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), team_2_ave_inputs)
+                com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
+
                 real_y = model.regressor1(com)
                 # real_y = model.dropoutLayer1(real_y)
                 real_y = model.regressor2(real_y)
@@ -354,9 +378,9 @@ def get_accuracy_name(inputs, targets, model, threshold = 0):
                 if False in torch.isnan(real_y) and (torch.abs(real_y) > threshold):
                     if t[j][2]*real_y > 0:
                         right += 1
-                    # else:
-                        # print("==={}===".format(real_y))
-                        # print(t[j])
+                    else:
+                        print("==={}===".format(real_y))
+                        print(t[j])
                     game += 1
 
     return 0 if game == 0 else right / game
@@ -366,6 +390,7 @@ def get_return(inputs, targets, model, threshold = 1, return_ = 1):
     leng = inputs.shape[0]
     game = 0.0
     gain = 0.0
+    gain_game = 0.0
     for i in range(leng):
         inp = inputs[i]
         t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
@@ -407,6 +432,14 @@ def get_return(inputs, targets, model, threshold = 1, return_ = 1):
                 team_1_ave_inputs = team_1_ave @ aw + ab
                 team_2_ave_inputs = team_2_ave @ aw + ab
                 com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
+                
+                # self attention
+                # com = model.attentionLayer(com)
+                # output attention
+                com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), team_1_ave_inputs)
+                com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), team_2_ave_inputs)
+                com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
+
                 real_y = model.regressor1(com)
                 real_y = model.regressor2(real_y)
                 real_y = model.regressor3(real_y)
@@ -417,9 +450,11 @@ def get_return(inputs, targets, model, threshold = 1, return_ = 1):
                             gain += (return_ * t[j][73])
                         else:
                             gain += (return_ * t[j][74])
+                        gain_game += 1
                             
                     game += 1
 
+    print("===gain===", gain_game, "===game===", game)
     return 0 if game == 0 else gain / game
 
 def get_accuracy_T2T(inputs, targets, model):

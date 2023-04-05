@@ -437,6 +437,80 @@ class InputAttentionLayer(nn.Module):
         # batch size * num of nodes * hidden dimension
         aggr_inputs = torch.sum(scored_inputs, dim=2)
         return aggr_inputs
+    
+class SelfAttentionLayer(nn.Module):
+    def __init__(self, hidden_dim: int, **kwargs):
+        super(SelfAttentionLayer, self).__init__(**kwargs)
+        # hidden dimension
+        self._hidden_dim = hidden_dim
+        # query (hidden dimension * hidden dimension)
+        self.qw = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
+        # key (hidden dimension * hidden dimension)
+        self.kw = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
+        # value (hidden dimension * hidden dimension)
+        self.vw = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
+        # initialize parameters
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.qw)
+        nn.init.xavier_uniform_(self.kw)
+        nn.init.xavier_uniform_(self.vw)
+        
+    def forward(self, inputs, unit_dim = 16):
+        # num of nodes * hidden dimension
+        inputs = inputs.reshape((unit_dim, self._hidden_dim))
+        # num of nodes * hidden dimension
+        q = torch.tanh(torch.matmul(inputs, self.qw))
+        # num of nodes * hidden dimension
+        k = torch.tanh(torch.matmul(inputs, self.kw))
+        # num of nodes * hidden dimension
+        v = torch.tanh(torch.matmul(inputs, self.vw))
+        # num of nodes * num of nodes
+        attn = torch.matmul(q, k.transpose(0, 1))
+        # num of nodes * num of nodes
+        attn_score = F.softmax(attn, dim=1)
+        # num of nodes * hidden dimension
+        scored_outputs = torch.matmul(attn_score, v)
+        # (num of nodes * hidden dimension)
+        scored_outputs = torch.flatten(scored_outputs)
+        return scored_outputs
+    
+class OutputAttentionLayer(nn.Module):
+    def __init__(self, hidden_dim: int, **kwargs):
+        super(OutputAttentionLayer, self).__init__(**kwargs)
+        # hidden dimension
+        self._hidden_dim = hidden_dim
+        # weight (hidden dimension)
+        self.w1 = nn.Parameter(torch.FloatTensor(self._hidden_dim, 1))
+        # weight (hidden dimension * hidden dimension)
+        self.w2 = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
+        # weight (hidden dimension * hidden dimension)
+        self.w3 = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
+        # initialize parameters
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.w1)
+        nn.init.xavier_uniform_(self.w2)
+        nn.init.xavier_uniform_(self.w3)
+        
+    def forward(self, inputs, hidden_state, unit_dim = 7):
+        # num of nodes * hidden dimension
+        inputs = inputs.reshape((unit_dim, self._hidden_dim))
+        # num of nodes * hidden dimension
+        hidden_state = hidden_state.reshape((1, self._hidden_dim)).repeat((unit_dim, 1)).reshape((unit_dim, self._hidden_dim))
+        # num of nodes * hidden dimension
+        u = torch.tanh(torch.matmul(inputs, self.w2) + torch.matmul(hidden_state, self.w3))
+        # num of nodes * 1
+        attn = torch.matmul(u, self.w1)
+        # num of nodes * 1
+        attn_score = F.softmax(attn, dim=1)
+        # num of nodes * hidden dimension
+        scored_outputs = inputs * attn_score
+        # num of nodes * hidden dimension
+        aggr_outputs = torch.flatten(scored_outputs)
+        return aggr_outputs
 
 class BGCN(nn.Module):
     def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, adj_3: np.ndarray, adj_4: np.ndarray, adj_5: np.ndarray, feat: np.ndarray, team_2_player: dict, aspect_num: int, hidden_dim: int, co_attention_dim: int, linear_transformation: bool, applying_player: bool, applying_attention: bool, **kwargs):

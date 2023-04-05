@@ -13,6 +13,7 @@ class SupervisedForecastTask(pl.LightningModule):
     def __init__(
         self,
         model: nn.Module,
+        attentionLayer: nn.Module,
         regressor="linear",
         loss="mse",
         learning_rate: float = 1e-3,
@@ -30,6 +31,7 @@ class SupervisedForecastTask(pl.LightningModule):
         print('\n================torch.cuda.is_available()======================', torch.cuda.is_available(), '\n')
         self.save_hyperparameters()
         self.model = model
+        self.attentionLayer = attentionLayer
         self.applying_player = applying_player
         self.using_other = False
         self.using_average = True

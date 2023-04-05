@@ -21,10 +21,14 @@ def get_model(args, dm):
         model = models.T2TGRU(hidden_dim=args.hidden_dim)
     return model
 
-def get_task(args, model, dm):
+def get_attentionLayer(args):
+    # return models.SelfAttentionLayer(hidden_dim=args.hidden_dim)
+    return models.OutputAttentionLayer(hidden_dim=args.hidden_dim)
+
+def get_task(args, model, attentionLayer, dm):
     task = getattr(tasks, args.settings.capitalize() + "ForecastTask")(
         # model=model, feat_max_val=dm.y_max, team_2_player= dm.player_2_team, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
-        model=model, team_2_player=dm.player_2_team, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
+        model=model, attentionLayer=attentionLayer, team_2_player=dm.player_2_team, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
     )
     return task
 
@@ -103,7 +107,8 @@ def main_supervised(args):
         **vars(args)
     )
     model = get_model(args, dm)
-    task = get_task(args, model, dm)
+    attentionLayer = get_attentionLayer(args)
+    task = get_task(args, model, attentionLayer, dm)
     callbacks = get_callbacks(args)
     trainer = pl.Trainer.from_argparse_args(args, callbacks=callbacks)
     trainer.fit(task, dm)
