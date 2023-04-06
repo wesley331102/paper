@@ -385,7 +385,7 @@ def get_accuracy_name(inputs, targets, model, threshold = 0):
 
     return 0 if game == 0 else right / game
 
-def get_return(inputs, targets, model, threshold = 1, return_ = 1):
+def get_return(inputs, targets, model, threshold = 0, return_ = 1):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
     game = 0.0
