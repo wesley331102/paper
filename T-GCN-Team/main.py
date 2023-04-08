@@ -23,7 +23,8 @@ def get_model(args, dm):
 
 def get_attentionLayer(args):
     # return models.SelfAttentionLayer(hidden_dim=args.hidden_dim)
-    return models.OutputAttentionLayer(hidden_dim=args.hidden_dim)
+    # return models.OutputAttentionLayer(hidden_dim=args.hidden_dim)
+    return models.OutputAttentionV2Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*3))
 
 def get_task(args, model, attentionLayer, dm):
     task = getattr(tasks, args.settings.capitalize() + "ForecastTask")(

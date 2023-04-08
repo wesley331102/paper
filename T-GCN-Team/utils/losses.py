@@ -164,10 +164,17 @@ def nba_mae_with_player_with_regularizer_loss_name(inputs, targets, model, lamda
                 # self attention
                 # com = model.attentionLayer(com)
                 # output attention
-                com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), team_1_ave_inputs)
-                com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), team_2_ave_inputs)
+                # com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), team_1_ave_inputs)
+                # com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), team_2_ave_inputs)
+                # com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
+                # output attention V2
+                diff1 = torch.sub(team_1_ave_inputs, team_2_ave_inputs)
+                diff2 = torch.sub(team_2_ave_inputs, team_1_ave_inputs)
+                mul = torch.mul(team_1_ave_inputs, team_2_ave_inputs)
+                com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), torch.cat((team_1_ave_inputs, diff1, mul), 0))
+                com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), torch.cat((team_2_ave_inputs, diff2, mul), 0))
                 com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
-                
+
                 real_y = model.regressor1(com)
                 # real_y = model.dropoutLayer1(real_y)
                 real_y = model.regressor2(real_y)
@@ -369,8 +376,15 @@ def nba_output_with_player_name(inputs, targets, model):
                 # self attention
                 # com = model.attentionLayer(com)
                 # output attention
-                com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), team_1_ave_inputs)
-                com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), team_2_ave_inputs)
+                # com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), team_1_ave_inputs)
+                # com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), team_2_ave_inputs)
+                # com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
+                # output attention V2
+                diff1 = torch.sub(team_1_ave_inputs, team_2_ave_inputs)
+                diff2 = torch.sub(team_2_ave_inputs, team_1_ave_inputs)
+                mul = torch.mul(team_1_ave_inputs, team_2_ave_inputs)
+                com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), torch.cat((team_1_ave_inputs, diff1, mul), 0))
+                com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), torch.cat((team_2_ave_inputs, diff2, mul), 0))
                 com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
                 
                 r_y = model.regressor1(com)
