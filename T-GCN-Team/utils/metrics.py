@@ -396,12 +396,13 @@ def get_accuracy_name(inputs, targets, model, threshold = 0):
                 real_y = model.regressor3(real_y)
                 # real_y = model.dropoutLayer3(real_y)
                 real_y = model.regressor4(real_y)
+                all_list = []
                 if False in torch.isnan(real_y) and (torch.abs(real_y) > threshold):
                     if t[j][2]*real_y > 0:
                         right += 1
-                    else:
-                        print("==={}===".format(real_y))
-                        print(t[j])
+                    # else:
+                    #     print("==={}===".format(real_y))
+                    #     print(t[j])
                     game += 1
 
     return 0 if game == 0 else right / game

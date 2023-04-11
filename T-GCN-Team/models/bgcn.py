@@ -513,35 +513,46 @@ class OutputAttentionLayer(nn.Module):
         return aggr_outputs
     
 class OutputAttentionV2Layer(nn.Module):
-    def __init__(self, hidden_dim: int, attention_dim: int, **kwargs):
+    def __init__(self, hidden_dim: int, attention_dim: int, attention_mul: bool = False, **kwargs):
         super(OutputAttentionV2Layer, self).__init__(**kwargs)
         # hidden dimension
         self._hidden_dim = hidden_dim
         # attention dimension
         self._attention_dim = attention_dim
-        # weight (attention dimension * 1)
-        self.w1 = nn.Parameter(torch.FloatTensor(self._attention_dim, 1))
+        # attention dimension
+        self._attention_mul = attention_mul
         # weight (hidden dimension * attention dimension)
-        self.w2 = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._attention_dim))
-        # weight (attention dimension * attention dimension)
-        self.w3 = nn.Parameter(torch.FloatTensor(self._attention_dim, self._attention_dim))
+        self.w1 = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._attention_dim))
+        if self._attention_mul == False:
+            # weight (attention dimension * attention dimension)
+            self.w2 = nn.Parameter(torch.FloatTensor(self._attention_dim, self._attention_dim))
+            # weight (attention dimension * 1)
+            self.w3 = nn.Parameter(torch.FloatTensor(self._attention_dim, 1))
         # initialize parameters
         self.reset_parameters()
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.w1)
-        nn.init.xavier_uniform_(self.w2)
-        nn.init.xavier_uniform_(self.w3)
+        if self._attention_mul == False:
+            nn.init.xavier_uniform_(self.w2)
+            nn.init.xavier_uniform_(self.w3)
         
     def forward(self, inputs, hidden_state, unit_dim = 7):
         # num of nodes * hidden dimension
         inputs = inputs.reshape((unit_dim, self._hidden_dim))
-        # num of nodes * attention dimension
-        hidden_state = hidden_state.reshape((1, self._attention_dim)).repeat((unit_dim, 1)).reshape((unit_dim, self._attention_dim))
-        # num of nodes * attention dimension
-        u = torch.tanh(torch.matmul(inputs, self.w2) + torch.matmul(hidden_state, self.w3))
-        # num of nodes * 1
-        attn = torch.matmul(u, self.w1)
+        if self._attention_mul:
+            # num of nodes * 1
+            attn = torch.tanh(torch.matmul(torch.matmul(inputs, self.w1), hidden_state))
+            attn = attn.reshape((unit_dim, 1))
+        else:
+            # num of nodes * attention dimension
+            hidden_state = hidden_state.reshape((1, self._attention_dim)).repeat((unit_dim, 1)).reshape((unit_dim, self._attention_dim))
+            # num of nodes * attention dimension
+            u = torch.tanh(torch.matmul(inputs, self.w1) + torch.matmul(hidden_state, self.w2))
+            # num of nodes * 1
+            attn = torch.matmul(u, self.w3)
+        # using square
+        attn = torch.square(attn)
         # num of nodes * 1
         attn_score = F.softmax(attn, dim=1)
         # num of nodes * hidden dimension
