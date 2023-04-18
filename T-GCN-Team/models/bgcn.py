@@ -552,7 +552,7 @@ class OutputAttentionV2Layer(nn.Module):
             # num of nodes * 1
             attn = torch.matmul(u, self.w3)
         # using square
-        attn = torch.square(attn)
+        # attn = torch.square(attn)
         # num of nodes * 1
         attn_score = F.softmax(attn, dim=1)
         # num of nodes * hidden dimension
@@ -560,6 +560,91 @@ class OutputAttentionV2Layer(nn.Module):
         # num of nodes * hidden dimension
         aggr_outputs = torch.flatten(scored_outputs)
         return aggr_outputs
+
+class OutputAttentionV3Layer(nn.Module):
+    def __init__(self, hidden_dim: int, attention_dim: int, **kwargs):
+        super(OutputAttentionV3Layer, self).__init__(**kwargs)
+        # hidden dimension
+        self._hidden_dim = hidden_dim
+        # attention dimension
+        self._attention_dim = attention_dim
+        # weight (hidden dimension * attention dimension)
+        self.w1 = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._attention_dim))
+        # weight (attention dimension * attention dimension)
+        self.w2 = nn.Parameter(torch.FloatTensor(self._attention_dim, self._attention_dim))
+        # weight (attention dimension * 1)
+        self.w3 = nn.Parameter(torch.FloatTensor(self._attention_dim, 1))
+        # initialize parameters
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.w1)
+        nn.init.xavier_uniform_(self.w2)
+        nn.init.xavier_uniform_(self.w3)
+        
+    def forward(self, inputs, hidden_state, unit_dim = 14):
+        # num of nodes * hidden dimension
+        inputs = inputs.reshape((unit_dim, self._hidden_dim))
+        # num of nodes * attention dimension
+        hidden_state = hidden_state.reshape((1, self._attention_dim)).repeat((unit_dim, 1)).reshape((unit_dim, self._attention_dim))
+        # num of nodes * attention dimension
+        u = torch.tanh(torch.matmul(inputs, self.w1) + torch.matmul(hidden_state, self.w2))
+        # num of nodes * 1
+        attn = torch.matmul(u, self.w3)
+        # num of nodes * 1
+        attn_score = F.softmax(attn, dim=1)
+        # num of nodes * hidden dimension
+        scored_outputs = inputs * attn_score
+        # num of nodes * hidden dimension
+        aggr_outputs = torch.flatten(scored_outputs)
+        return aggr_outputs
+    
+class OutputCoAttentionLayer(nn.Module):
+    def __init__(self, co_attention_dim: int):
+        super(OutputCoAttentionLayer, self).__init__()
+        # co-attention dimension
+        self._co_attention_dim = co_attention_dim
+        # weight (co-attention dimension * co-attention dimension)
+        self.w_c = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._co_attention_dim))
+        # weight (co-attention dimension * co-attention dimension)
+        self.w_t = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._co_attention_dim))
+        # weight (co-attention dimension * co-attention dimension)
+        self.w_p = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._co_attention_dim))
+        # weight (co-attention dimension * 1)
+        self.w_ht = nn.Parameter(torch.FloatTensor(self._co_attention_dim, 1))
+        # weight (co-attention dimension * 1)
+        self.w_hp = nn.Parameter(torch.FloatTensor(self._co_attention_dim, 1))
+        # initialize parameters
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        nn.init.xavier_uniform_(self.w_c)
+        nn.init.xavier_uniform_(self.w_t)
+        nn.init.xavier_uniform_(self.w_p)
+        nn.init.xavier_uniform_(self.w_ht)
+        nn.init.xavier_uniform_(self.w_hp)
+    
+    def forward(self, hidden_state, hidden_state_dim, history_hidden_state, history_hidden_state_dim):
+        # hidden state size * co-attention dimension
+        hidden_state = hidden_state.reshape((hidden_state_dim, self._co_attention_dim))
+        # history hidden state size * co-attention dimension
+        history_hidden_state = history_hidden_state.reshape((history_hidden_state_dim, self._co_attention_dim))
+        # hidden state size * history hidden state size
+        C = torch.tanh(torch.matmul(hidden_state, torch.matmul(self.w_c, history_hidden_state.permute(0, 1))))
+        # hidden state size * co-attention dimension
+        co_attention_hidden_state = torch.tanh(torch.matmul(hidden_state, self.w_t) + torch.matmul(C, torch.matmul(history_hidden_state.permute(0, 1), self.w_p)))
+        # history hidden state size * co-attention dimension
+        co_attention_history_hidden_state = torch.tanh(torch.matmul(history_hidden_state, self.w_p) + torch.matmul(C.permute(0, 1), torch.matmul(hidden_state, self.w_t)))
+        # hidden state size * 1
+        co_attention_hidden_state_score = F.softmax(torch.matmul(co_attention_hidden_state, self.w_ht), dim=1)
+        # history hidden state size * 1
+        co_attention_history_hidden_state_score = F.softmax(torch.matmul(co_attention_history_hidden_state, self.w_hp), dim=1)
+        # hidden state size * co-attention dimension
+        co_attention_hidden_state_output = hidden_state * co_attention_hidden_state_score
+        # history hidden state size * co-attention dimension
+        co_attention_history_hidden_state_output = history_hidden_state * co_attention_history_hidden_state_score
+
+        return co_attention_hidden_state_output, co_attention_history_hidden_state_output
 
 class BGCN(nn.Module):
     def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, adj_3: np.ndarray, adj_4: np.ndarray, adj_5: np.ndarray, feat: np.ndarray, team_2_player: dict, aspect_num: int, hidden_dim: int, co_attention_dim: int, linear_transformation: bool, applying_player: bool, applying_attention: bool, **kwargs):
