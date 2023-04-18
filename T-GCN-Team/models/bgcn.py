@@ -600,20 +600,26 @@ class OutputAttentionV3Layer(nn.Module):
         return aggr_outputs
     
 class OutputCoAttentionLayer(nn.Module):
-    def __init__(self, co_attention_dim: int):
+    def __init__(self, hidden_size: int, history_hidden_size: int, hidden_dim: int, co_attention_dim: int = 32):
         super(OutputCoAttentionLayer, self).__init__()
+        # hidden state size
+        self._hidden_size = hidden_size
+        # history hidden state size
+        self._history_hidden_size = history_hidden_size
+        # hidden state dimension
+        self._hidden_dim = hidden_dim
         # co-attention dimension
         self._co_attention_dim = co_attention_dim
-        # weight (co-attention dimension * co-attention dimension)
-        self.w_c = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._co_attention_dim))
-        # weight (co-attention dimension * co-attention dimension)
-        self.w_t = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._co_attention_dim))
-        # weight (co-attention dimension * co-attention dimension)
-        self.w_p = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._co_attention_dim))
-        # weight (co-attention dimension * 1)
-        self.w_ht = nn.Parameter(torch.FloatTensor(self._co_attention_dim, 1))
-        # weight (co-attention dimension * 1)
-        self.w_hp = nn.Parameter(torch.FloatTensor(self._co_attention_dim, 1))
+        # weight (hidden state dimension * hidden state dimension)
+        self.w_c = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
+        # weight (co-attention dimension * hidden state dimension)
+        self.w_t = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._hidden_dim))
+        # weight (co-attention dimension * hidden state dimension)
+        self.w_p = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._hidden_dim))
+        # weight (co-attention dimension * hidden state size)
+        self.w_ht = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._hidden_size))
+        # weight (co-attention dimension * history hidden state size)
+        self.w_hp = nn.Parameter(torch.FloatTensor(self._co_attention_dim, self._history_hidden_size))
         # initialize parameters
         self.reset_parameters()
 
@@ -624,25 +630,29 @@ class OutputCoAttentionLayer(nn.Module):
         nn.init.xavier_uniform_(self.w_ht)
         nn.init.xavier_uniform_(self.w_hp)
     
-    def forward(self, hidden_state, hidden_state_dim, history_hidden_state, history_hidden_state_dim):
-        # hidden state size * co-attention dimension
-        hidden_state = hidden_state.reshape((hidden_state_dim, self._co_attention_dim))
-        # history hidden state size * co-attention dimension
-        history_hidden_state = history_hidden_state.reshape((history_hidden_state_dim, self._co_attention_dim))
+    def forward(self, hidden_state, history_hidden_state):
+        # hidden state size * hidden state dimension
+        hidden_state = hidden_state.reshape((self._hidden_size, self._hidden_dim))
+        # history hidden state size * hidden state dimension
+        history_hidden_state = history_hidden_state.reshape((self._history_hidden_size, self._hidden_dim))
         # hidden state size * history hidden state size
-        C = torch.tanh(torch.matmul(hidden_state, torch.matmul(self.w_c, history_hidden_state.permute(0, 1))))
-        # hidden state size * co-attention dimension
-        co_attention_hidden_state = torch.tanh(torch.matmul(hidden_state, self.w_t) + torch.matmul(C, torch.matmul(history_hidden_state.permute(0, 1), self.w_p)))
-        # history hidden state size * co-attention dimension
-        co_attention_history_hidden_state = torch.tanh(torch.matmul(history_hidden_state, self.w_p) + torch.matmul(C.permute(0, 1), torch.matmul(hidden_state, self.w_t)))
-        # hidden state size * 1
-        co_attention_hidden_state_score = F.softmax(torch.matmul(co_attention_hidden_state, self.w_ht), dim=1)
-        # history hidden state size * 1
-        co_attention_history_hidden_state_score = F.softmax(torch.matmul(co_attention_history_hidden_state, self.w_hp), dim=1)
-        # hidden state size * co-attention dimension
-        co_attention_hidden_state_output = hidden_state * co_attention_hidden_state_score
-        # history hidden state size * co-attention dimension
-        co_attention_history_hidden_state_output = history_hidden_state * co_attention_history_hidden_state_score
+        C = torch.tanh(torch.matmul(hidden_state, torch.matmul(self.w_c, torch.t(history_hidden_state))))
+        # co-attention dimension * hidden state size
+        co_attention_hidden_state = torch.tanh(torch.matmul(self.w_t, torch.t(hidden_state)) + torch.matmul(self.w_p, torch.matmul(torch.t(history_hidden_state), torch.t(C))))
+        # co-attention dimension * history hidden state size
+        co_attention_history_hidden_state = torch.tanh(torch.matmul(self.w_p, torch.t(history_hidden_state)) + torch.matmul(self.w_t, torch.matmul(torch.t(hidden_state), C)))
+        # hidden state size * hidden state size
+        co_attention_hidden_state_score = F.softmax(torch.matmul(torch.t(self.w_ht), co_attention_hidden_state), dim=1)
+        # history hidden state size * history hidden state size
+        co_attention_history_hidden_state_score = F.softmax(torch.matmul(torch.t(self.w_hp), co_attention_history_hidden_state), dim=1)
+        # hidden state size * hidden state dimension
+        co_attention_hidden_state_output = torch.matmul(co_attention_hidden_state_score, hidden_state)
+        # history hidden state size * hidden state dimension
+        co_attention_history_hidden_state_output = torch.matmul(co_attention_history_hidden_state_score, history_hidden_state)\
+        # batch size * num of players * (number of aspect * aspect dimension)
+        co_attention_hidden_state_output = co_attention_hidden_state_output.reshape((self._hidden_size, self._hidden_dim))       
+        # batch size * num of players * (number of aspect * aspect dimension)
+        co_attention_history_hidden_state_output = co_attention_history_hidden_state_output.reshape((self._history_hidden_size, self._hidden_dim))
 
         return co_attention_hidden_state_output, co_attention_history_hidden_state_output
 

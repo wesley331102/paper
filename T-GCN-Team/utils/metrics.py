@@ -159,9 +159,9 @@ def get_rmse_name(inputs, targets, model):
                 # com2 = model.attentionLayer(torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0), com2, 12)
                 # com = torch.cat((com1, com2), 0)
                 ## co-attention
-                com1 = model.attentionLayer(com1, 7, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0), 12)
-                com2 = model.attentionLayer(com2, 7, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0), 12)
-                com = torch.cat((com1, com2), 0)
+                com1, ave1 = model.attentionLayer(com1, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0))
+                com2, ave2 = model.attentionLayer(com2, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0))
+                com = torch.flatten(torch.cat((com1, com2, ave1, ave2), 0))
                 
                 r_y = model.regressor1(com)
                 # r_y = model.dropoutLayer1(r_y)
@@ -340,9 +340,9 @@ def get_mae_name(inputs, targets, model):
                 # com2 = model.attentionLayer(torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0), com2, 12)
                 # com = torch.cat((com1, com2), 0)
                 ## co-attention
-                com1 = model.attentionLayer(com1, 7, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0), 12)
-                com2 = model.attentionLayer(com2, 7, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0), 12)
-                com = torch.cat((com1, com2), 0)
+                com1, ave1 = model.attentionLayer(com1, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0))
+                com2, ave2 = model.attentionLayer(com2, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0))
+                com = torch.flatten(torch.cat((com1, com2, ave1, ave2), 0))
                 
                 r_y = model.regressor1(com)
                 # r_y = model.dropoutLayer1(r_y)
@@ -523,9 +523,9 @@ def get_accuracy_name(inputs, targets, model, threshold = 0):
                 # com2 = model.attentionLayer(torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0), com2, 12)
                 # com = torch.cat((com1, com2), 0)
                 ## co-attention
-                com1 = model.attentionLayer(com1, 7, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0), 12)
-                com2 = model.attentionLayer(com2, 7, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0), 12)
-                com = torch.cat((com1, com2), 0)
+                com1, ave1 = model.attentionLayer(com1, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0))
+                com2, ave2 = model.attentionLayer(com2, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0))
+                com = torch.flatten(torch.cat((com1, com2, ave1, ave2), 0))
                 
                 r_y = model.regressor1(com)
                 # r_y = model.dropoutLayer1(r_y)
@@ -648,9 +648,9 @@ def get_return(inputs, targets, model, threshold = 0, return_ = 1):
                 # com2 = model.attentionLayer(torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0), com2, 12)
                 # com = torch.cat((com1, com2), 0)
                 ## co-attention
-                com1 = model.attentionLayer(com1, 7, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0), 12)
-                com2 = model.attentionLayer(com2, 7, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0), 12)
-                com = torch.cat((com1, com2), 0)
+                com1, ave1 = model.attentionLayer(com1, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0))
+                com2, ave2 = model.attentionLayer(com2, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0))
+                com = torch.flatten(torch.cat((com1, com2, ave1, ave2), 0))
                 
                 r_y = model.regressor1(com)
                 # r_y = model.dropoutLayer1(r_y)

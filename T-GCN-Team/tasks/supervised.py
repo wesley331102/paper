@@ -61,7 +61,7 @@ class SupervisedForecastTask(pl.LightningModule):
                     self.regressor1 = nn.Linear(
                         # self.model.hyperparameters.get("hidden_dim")*6,
                         # self.model.hyperparameters.get("hidden_dim")*16,
-                        self.model.hyperparameters.get("hidden_dim")*24,
+                        self.model.hyperparameters.get("hidden_dim")*38,
                         256
                     )
                     self.regressor2 = nn.Linear(
