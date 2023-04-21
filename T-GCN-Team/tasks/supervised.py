@@ -48,6 +48,7 @@ class SupervisedForecastTask(pl.LightningModule):
                             1,
                         )
                 else:
+                    self.l = torch.nn.CrossEntropyLoss()
                     # GCN
                     # self.regressor1 = nn.Linear(
                     #         # self.model.hyperparameters.get("hidden_dim")*6,
@@ -74,7 +75,7 @@ class SupervisedForecastTask(pl.LightningModule):
                     )
                     self.regressor4 = nn.Linear(
                         8,
-                        1,
+                        2,
                     )
                     # self.dropoutLayer1 = nn.Dropout(0.6)
                     # self.dropoutLayer2 = nn.Dropout(0.6)
@@ -160,7 +161,7 @@ class SupervisedForecastTask(pl.LightningModule):
             else:
                 return utils.losses.nba_rmse_with_regularizer_loss(inputs, targets, self)
         if self._loss == 'nba_ce':
-            return utils.losses.nba_cross_entropy_loss_with_player(inputs, targets, self, self.team_2_player)
+            return utils.losses.nba_cross_entropy_with_player_name(inputs, targets, self, self.team_2_player)
         if self._loss == 'nba_score':
             return utils.losses.nba_rmse_with_score_loss(inputs, targets, self, self.team_2_player)
         if self._loss == 'nba_T2T':
@@ -171,6 +172,7 @@ class SupervisedForecastTask(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         predictions, y = self.shared_step(batch, batch_idx)
         loss = self.loss(predictions, y)
+        loss = torch.tensor(loss, requires_grad=True)
         self.log("train_loss", loss)
         return loss
 
@@ -185,34 +187,39 @@ class SupervisedForecastTask(pl.LightningModule):
         # score
         # mse, rmse = utils.metrics.get_rmse_score(predictions, y, self, self.team_2_player)
         # mae = utils.metrics.get_mae_score(predictions, y, self, self.team_2_player)
+        print('=======')
+        x = utils.losses.nba_cross_entropy_with_player_name(predictions, y, self)
         # Name
-        mse, rmse = utils.metrics.get_rmse_name(predictions, y, self)
-        mae = utils.metrics.get_mae_name(predictions, y, self)
-        accr = utils.metrics.get_accuracy_name(predictions, y, self)
-        gain = utils.metrics.get_return(predictions, y, self)
+        # mse, rmse = utils.metrics.get_rmse_name(predictions, y, self)
+        # mae = utils.metrics.get_mae_name(predictions, y, self)
+        # accr = utils.metrics.get_accuracy_name(predictions, y, self)
+        # gain = utils.metrics.get_return(predictions, y, self)
         # T2T
         # mse, rmse = utils.metrics.get_rmse_T2T(predictions, y, self)
         # mae = utils.metrics.get_mae_T2T(predictions, y, self)
         # accr = utils.metrics.get_accuracy_T2T(predictions, y, self)
-        metrics = {
-            "val_loss_mse": loss,
-            # "rmse_mean": rmse_mean,
-            "rmse": rmse,
-            "mae": mae,
-            "accuracy": accr,
-            "gain": gain,
-        }
-        print('rmse: ', rmse, '=====', 'mae: ', mae, '=====', 'accr: ', accr, '=====', 'gain: ', gain, '=====')
-        print('1: ', utils.metrics.get_return(predictions, y, self, 1), '=====', '2: ', utils.metrics.get_return(predictions, y, self, 2), '=====', '3: ', utils.metrics.get_return(predictions, y, self, 3), '=====', '4: ', utils.metrics.get_return(predictions, y, self, 4), "=====", "5: ", utils.metrics.get_return(predictions, y, self, 5))
-        self.log_dict(metrics)
+        # metrics = {
+        #     "val_loss_mse": loss,
+        #     # "rmse_mean": rmse_mean,
+        #     "rmse": rmse,
+        #     "mae": mae,
+        #     "accuracy": accr,
+        #     "gain": gain,
+        # }
+        # print('rmse: ', rmse, '=====', 'mae: ', mae, '=====', 'accr: ', accr, '=====', 'gain: ', gain, '=====')
+        # print('1: ', utils.metrics.get_return(predictions, y, self, 1), '=====', '2: ', utils.metrics.get_return(predictions, y, self, 2), '=====', '3: ', utils.metrics.get_return(predictions, y, self, 3), '=====', '4: ', utils.metrics.get_return(predictions, y, self, 4), "=====", "5: ", utils.metrics.get_return(predictions, y, self, 5))
+        # self.log_dict(metrics)
+        
         # GCN
         # p, real_y = utils.losses.nba_output_with_player(predictions, y, self, self.team_2_player)
         # score
         # p, real_y = utils.losses.nba_output_with_player_score(predictions, y, self, self.team_2_player)
         # Name
-        p, real_y = utils.losses.nba_output_with_player_name(predictions, y, self)
+        # p, real_y = utils.losses.nba_output_with_player_name(predictions, y, self)
         # T2T
         # p, real_y = utils.losses.nba_output_with_player_T2T(predictions, y, self)
+        # CE
+        p, real_y = utils.losses.nba_cross_entropy_output(predictions, y, self)
         return p, real_y
 
     def test_step(self, batch, batch_idx):

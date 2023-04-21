@@ -648,10 +648,10 @@ class OutputCoAttentionLayer(nn.Module):
         # hidden state size * hidden state dimension
         co_attention_hidden_state_output = torch.matmul(co_attention_hidden_state_score, hidden_state)
         # history hidden state size * hidden state dimension
-        co_attention_history_hidden_state_output = torch.matmul(co_attention_history_hidden_state_score, history_hidden_state)\
-        # batch size * num of players * (number of aspect * aspect dimension)
+        co_attention_history_hidden_state_output = torch.matmul(co_attention_history_hidden_state_score, history_hidden_state)
+        # hidden state size * hidden state dimension
         co_attention_hidden_state_output = co_attention_hidden_state_output.reshape((self._hidden_size, self._hidden_dim))       
-        # batch size * num of players * (number of aspect * aspect dimension)
+        # history hidden state size * hidden state dimension
         co_attention_history_hidden_state_output = co_attention_history_hidden_state_output.reshape((self._history_hidden_size, self._hidden_dim))
 
         return co_attention_hidden_state_output, co_attention_history_hidden_state_output

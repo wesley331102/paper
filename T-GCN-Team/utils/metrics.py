@@ -537,9 +537,9 @@ def get_accuracy_name(inputs, targets, model, threshold = 0):
                 if False in torch.isnan(r_y) and (torch.abs(r_y) > threshold):
                     if t[j][2]*r_y > 0:
                         right += 1
-                    # else:
-                    #     print("==={}===".format(r_y))
-                    #     print(t[j])
+                    else:
+                        print("==={}===".format(r_y))
+                        print(t[j])
                     game += 1
 
     return 0 if game == 0 else right / game
