@@ -21,7 +21,6 @@ class SupervisedForecastTask(pl.LightningModule):
         feat_max_val: float = 1.0,
         applying_player: bool = True,
         applying_score: bool = False,
-        # applying_score: bool = True,
         team_2_player: dict = {},
         t_dim: int = 0,
         p_dim: int = 0,
@@ -48,8 +47,6 @@ class SupervisedForecastTask(pl.LightningModule):
                             1,
                         )
                 else:
-                    self.sig = nn.Sigmoid()
-                    self.loss_F = nn.BCELoss()
                     # GCN
                     # self.regressor1 = nn.Linear(
                     #         # self.model.hyperparameters.get("hidden_dim")*6,

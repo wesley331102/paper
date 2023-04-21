@@ -657,7 +657,7 @@ class OutputCoAttentionLayer(nn.Module):
         return co_attention_hidden_state_output, co_attention_history_hidden_state_output
 
 class BGCN(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, adj_3: np.ndarray, adj_4: np.ndarray, adj_5: np.ndarray, feat: np.ndarray, team_2_player: dict, aspect_num: int, hidden_dim: int, co_attention_dim: int, linear_transformation: bool, applying_player: bool, applying_attention: bool, **kwargs):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, adj_3: np.ndarray, adj_4: np.ndarray, adj_5: np.ndarray, feat: np.ndarray, team_2_player: dict, aspect_num: int, hidden_dim: int, co_attention_dim: int, applying_player: bool, applying_attention: bool, aspect_dim: int = 16, **kwargs):
         super(BGCN, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
@@ -671,8 +671,6 @@ class BGCN(nn.Module):
         self._hidden_dim = hidden_dim
         # co-attention_dim dimension
         self._co_attention_dim = co_attention_dim
-        # using linear transformation or not
-        self._linear_transformation = linear_transformation
         # applying attention
         self._applying_attention = applying_attention
         # adjacency matrices
@@ -686,15 +684,13 @@ class BGCN(nn.Module):
         # team to player dictionary
         self._team_2_player = team_2_player
 
-        # feature dimension
-        if self._linear_transformation:
-            # tunable
-            self._aspect_dim = 16
-            self.linear_transformation_offense = nn.Linear(5, self._aspect_dim)
-            self.linear_transformation_defend = nn.Linear(3, self._aspect_dim)
-            self.linear_transformation_error = nn.Linear(2, self._aspect_dim)
-            self.linear_transformation_influence = nn.Linear(4, self._aspect_dim)
-        self._feature_dim = self._aspect_dim*4 if self._linear_transformation else feat.shape[2]
+        # linear transformation
+        self._aspect_dim = aspect_dim
+        self.linear_transformation_offense = nn.Linear(5, self._aspect_dim)
+        self.linear_transformation_defend = nn.Linear(3, self._aspect_dim)
+        self.linear_transformation_error = nn.Linear(2, self._aspect_dim)
+        self.linear_transformation_influence = nn.Linear(4, self._aspect_dim)
+        self._feature_dim = self._aspect_dim * 4
 
         # BGCN cell
         self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self.adj_3, self.adj_4, self.adj_5, self._team_2_player, self._input_dim_t, self._input_dim_p, self._aspect_num, self._feature_dim, self._hidden_dim, self._co_attention_dim, self._applying_player)
@@ -732,22 +728,17 @@ class BGCN(nn.Module):
         new_inputs = None
         new_input_dim = input_dim if self._applying_player else self._input_dim_t
 
-        # linear transforamtion
-        if self._linear_transformation:
-            # origin feature dimension * aspect dimension
-            offense_weight = self.mask_aspect(feature_dim, self.linear_transformation_offense.weight, [2, 5, 8, 9, 12])
-            defend_weight = self.mask_aspect(feature_dim, self.linear_transformation_defend.weight, [10, 14, 15])
-            error_weight = self.mask_aspect(feature_dim, self.linear_transformation_error.weight, [13, 17])
-            influence_weight = self.mask_aspect(feature_dim, self.linear_transformation_influence.weight, [19, 20, 21, 22])
-            # origin feature dimension * feature dimension
-            aspect_weight = torch.cat((offense_weight, defend_weight, error_weight, influence_weight), dim=1)
-            # feature dimension
-            aspect_bias = torch.cat((self.linear_transformation_offense.bias, self.linear_transformation_defend.bias, self.linear_transformation_error.bias, self.linear_transformation_influence.bias), dim=0)
-            # batch size * seq length * num of nodes * feature dimension
-            new_inputs = inputs @ aspect_weight + aspect_bias
-        else:
-             # batch size * seq length * num of nodes * feature dimension
-            new_inputs = inputs[:, :, :new_input_dim, :]
+        # linear transforamtion (origin feature dimension * aspect dimension)
+        offense_weight = self.mask_aspect(feature_dim, self.linear_transformation_offense.weight, [2, 5, 8, 9, 12])
+        defend_weight = self.mask_aspect(feature_dim, self.linear_transformation_defend.weight, [10, 14, 15])
+        error_weight = self.mask_aspect(feature_dim, self.linear_transformation_error.weight, [13, 17])
+        influence_weight = self.mask_aspect(feature_dim, self.linear_transformation_influence.weight, [19, 20, 21, 22])
+        # origin feature dimension * feature dimension
+        aspect_weight = torch.cat((offense_weight, defend_weight, error_weight, influence_weight), dim=1)
+        # feature dimension
+        aspect_bias = torch.cat((self.linear_transformation_offense.bias, self.linear_transformation_defend.bias, self.linear_transformation_error.bias, self.linear_transformation_influence.bias), dim=0)
+        # batch size * seq length * num of nodes * feature dimension
+        new_inputs = inputs @ aspect_weight + aspect_bias
 
         # initial output
         output = None
@@ -782,7 +773,6 @@ class BGCN(nn.Module):
         parser.add_argument("--aspect_num", type=int, default=4)
         parser.add_argument("--hidden_dim", type=int, default=64)
         parser.add_argument("--co_attention_dim", type=int, default=32)
-        parser.add_argument("--linear_transformation", action="store_true")
         parser.add_argument("--applying_player", action="store_true")
         parser.add_argument("--applying_attention", action="store_true")
         return parser
@@ -793,7 +783,6 @@ class BGCN(nn.Module):
             "aspect_num": self._aspect_num,
             "hidden_dim": self._hidden_dim,
             "co_attention_dim": self._co_attention_dim,
-            "linear_transformation": self._linear_transformation,
             "applying_player": self._applying_player,
             "applying_attention": self._applying_attention
         }
