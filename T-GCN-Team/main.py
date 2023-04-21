@@ -24,10 +24,10 @@ def get_model(args, dm):
 def get_attentionLayer(args):
     # return models.SelfAttentionLayer(hidden_dim=args.hidden_dim)
     # return models.OutputAttentionLayer(hidden_dim=args.hidden_dim)
-    # return models.OutputAttentionV2Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*3), attention_mul=False)
+    return models.OutputAttentionV2Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*3), attention_mul=False)
     # return models.OutputAttentionV2Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*7), attention_mul=False)
     # return models.OutputAttentionV3Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*5))
-    return models.OutputCoAttentionLayer(hidden_size=7, history_hidden_size=12, hidden_dim=args.hidden_dim)
+    # return models.OutputCoAttentionLayer(hidden_size=7, history_hidden_size=12, hidden_dim=args.hidden_dim)
 
 def get_task(args, model, attentionLayer, dm):
     task = getattr(tasks, args.settings.capitalize() + "ForecastTask")(
@@ -101,8 +101,8 @@ def main_supervised(args):
         # y_path=os.path.join('data', '21_22', 'team_list_y_win_rate.p'), 
         # y_path=os.path.join('data', '21_22', 'team_list_y_score.p'), 
         # y_path=os.path.join('data', '21_22', 'team_list_y_namenum.p'), 
-        # y_path=os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p'), 
-        y_path=os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p'), 
+        y_path=os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p'), 
+        # y_path=os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p'), 
         adj_path=os.path.join('data', '21_22', 'team_adj.csv'), 
         adj_1_path=os.path.join('data', '21_22', 'pass_adj.csv'),
         adj_2_path=os.path.join('data', '21_22', 'ast_adj.csv'),

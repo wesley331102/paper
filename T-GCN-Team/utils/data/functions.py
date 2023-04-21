@@ -70,13 +70,13 @@ def dict_to_list_name(data):
     for data_dict in data:
         res = list()    
         for key in data_dict:
-            if not (len(data_dict[key][3]) == 4):
-                data_dict[key][3].insert(0, data_dict[key][3][2])
-            team_1_ave = [item for sublist in data_dict[key][3] for item in sublist]
-            if not (len(data_dict[key][4]) == 4):
-                data_dict[key][4].insert(0, data_dict[key][4][2])
-            team_2_ave = [item for sublist in data_dict[key][4] for item in sublist]
-            assert len(team_1_ave) == 80 and len(team_2_ave) == 80
+            # if not (len(data_dict[key][3]) == 4):
+            #     data_dict[key][3].insert(0, data_dict[key][3][2])
+            # team_1_ave = [item for sublist in data_dict[key][3] for item in sublist]
+            # if not (len(data_dict[key][4]) == 4):
+            #     data_dict[key][4].insert(0, data_dict[key][4][2])
+            # team_2_ave = [item for sublist in data_dict[key][4] for item in sublist]
+            # assert len(team_1_ave) == 80 and len(team_2_ave) == 80
 
             k1 = list()
             k1.extend(data_dict[key][1])
@@ -93,18 +93,18 @@ def dict_to_list_name(data):
             all_.extend(k1)
             all_.extend(k2)
             # delete
-            # all_.extend(data_dict[key][3])
-            # all_.extend(data_dict[key][4])
-            all_.extend(team_1_ave)
-            all_.extend(team_2_ave)
+            all_.extend(data_dict[key][3])
+            all_.extend(data_dict[key][4])
+            # all_.extend(team_1_ave)
+            # all_.extend(team_2_ave)
             # odds
             all_.append(data_dict[key][5])
             all_.append(data_dict[key][6])
             res.append(all_)
         z = list()
         # while len(z) != 33:
-        # while len(z) != 75:
-        while len(z) != 195:
+        while len(z) != 75:
+        # while len(z) != 195:
             z.append(0)
         while len(res) != 15:
             res.append(z)
