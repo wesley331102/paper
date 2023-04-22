@@ -24,6 +24,7 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         split_ratio: float = 0.8,
         normalize: bool = True,
         T2T: bool = False,
+        output_attention: str = "V2",
         **kwargs
     ):
         super(SpatioTemporalCSVDataModule, self).__init__()
@@ -49,7 +50,6 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         else:
             self._feat = utils.data.functions.load_features(self._feat_path, self._p_feat_path)
             self._y = utils.data.functions.load_targets(self._y_path)
-            # self._y_max = utils.data.functions.load_y_max(self._y_path)
         self._player_team_dict = utils.data.functions.load_team_player_dict(self._player_team_path)
         self._adj = utils.data.functions.load_adjacency_matrix(self._adj_path)
         self._adj_1 = utils.data.functions.load_adjacency_matrix(self._adj_1_path)
@@ -57,6 +57,7 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         self._adj_3 = utils.data.functions.load_adjacency_matrix(self._adj_3_path)
         self._adj_4 = utils.data.functions.load_adjacency_matrix(self._adj_4_path)
         self._adj_5 = utils.data.functions.load_adjacency_matrix(self._adj_5_path)
+        self._output_attention = output_attention
 
     @staticmethod
     def add_data_specific_arguments(parent_parser):
@@ -85,10 +86,9 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
             ) = utils.data.functions.generate_torch_datasets(
                 self._feat,
                 self._y,
-                # self.seq_len,
-                # self.pre_len,
+                output_attention=self._output_attention,
                 split_ratio=self.split_ratio,
-                normalize=self.normalize,
+                normalize=self.normalize
             )
 
     def train_dataloader(self):
@@ -96,10 +96,6 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=len(self.val_dataset))
-
-    # @property
-    # def y_max(self):
-    #     return self._y_max
 
     @property
     def adj(self):

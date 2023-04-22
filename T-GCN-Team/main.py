@@ -22,16 +22,19 @@ def get_model(args, dm):
     return model
 
 def get_attentionLayer(args):
-    # return models.SelfAttentionLayer(hidden_dim=args.hidden_dim)
-    # return models.OutputAttentionLayer(hidden_dim=args.hidden_dim)
-    return models.OutputAttentionV2Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*3), attention_mul=False)
-    # return models.OutputAttentionV2Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*7), attention_mul=False)
-    # return models.OutputAttentionV3Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*5))
-    # return models.OutputCoAttentionLayer(hidden_size=7, history_hidden_size=12, hidden_dim=args.hidden_dim)
+    if args.output_attention == "self":
+        return models.SelfAttentionLayer(hidden_dim=args.hidden_dim)
+    elif args.output_attention == "V1":
+        return models.OutputAttentionLayer(hidden_dim=args.hidden_dim)
+    elif args.output_attention == "V2":
+        return models.OutputAttentionV2Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*3), attention_mul=False)
+    elif args.output_attention == "V2_oppo":
+        return models.OutputAttentionV2Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*7), attention_mul=False)
+    elif args.output_attention == "co":
+        return models.OutputCoAttentionLayer(hidden_size=7, history_hidden_size=12, hidden_dim=args.hidden_dim)
 
 def get_task(args, model, attentionLayer, dm):
     task = getattr(tasks, args.settings.capitalize() + "ForecastTask")(
-        # model=model, feat_max_val=dm.y_max, team_2_player= dm.player_2_team, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
         model=model, attentionLayer=attentionLayer, team_2_player=dm.player_2_team, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
     )
     return task
@@ -98,9 +101,6 @@ def main_supervised(args):
         feat_path=os.path.join('data', '21_22', 'new_team_list_other_n.p'), 
         p_feat_path=os.path.join('data', '21_22', 'new_player_list_other_n.p'),
         player_team_path=os.path.join('data', '21_22', 'player_to_team_dict.p'),
-        # y_path=os.path.join('data', '21_22', 'team_list_y_win_rate.p'), 
-        # y_path=os.path.join('data', '21_22', 'team_list_y_score.p'), 
-        # y_path=os.path.join('data', '21_22', 'team_list_y_namenum.p'), 
         y_path=os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p'), 
         # y_path=os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p'), 
         adj_path=os.path.join('data', '21_22', 'team_adj.csv'), 
@@ -135,7 +135,6 @@ if __name__ == "__main__":
         "--model_name",
         type=str,
         help="The name of the model for nba score difference prediction",
-        # choices=("GCN", "GRU", "BGCN"),
         choices=("BGCN", "GRU", "T2TGRU"),
         default="BGCN",
     )
@@ -161,6 +160,6 @@ if __name__ == "__main__":
 
     try:
         results = main(args)
-    except:  # noqa: E722
+    except:
         traceback.print_exc()
         exit(-1)

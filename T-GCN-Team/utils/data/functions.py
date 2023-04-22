@@ -11,9 +11,6 @@ def load_features(feat_path, p_feature_path, dtype=np.float32):
     feat_p_df = pickle.load(open(p_feature_path, "rb"))
     feat = np.array(np.concatenate((feat_df, feat_p_df), axis=1), dtype=dtype)
     return feat
-    # feat_df = pd.read_csv(feat_path)
-    # feat = np.array(feat_df, dtype=dtype)
-    # return 
 
 def load_T2T_features(feat_path):
     feat_df = pickle.load(open(feat_path, "rb"))
@@ -26,9 +23,6 @@ def load_team_player_dict(path):
 def load_targets(target_path):
     target_df = pickle.load(open(target_path, "rb"))
     return target_df
-    # feat_df = pd.read_csv(feat_path)
-    # feat = np.array(feat_df, dtype=dtype)
-    # return feat
 
 def load_T2T_targets(target_path):
     target_df = pickle.load(open(target_path, "rb"))
@@ -48,24 +42,18 @@ def load_adjacency_matrix(adj_path, dtype=np.float32):
     adj = np.array(adj_df, dtype=dtype)
     return adj
 
-def dict_to_list(data, using_other: bool=False):
+def dict_to_list(data):
     result = list()
     for data_dict in data:
         res = list()
-        if using_other:
-            for key in data_dict:
-                res.append((key[0], key[1],  data_dict[key][0], data_dict[key][1], data_dict[key][2], data_dict[key][3], data_dict[key][4]))
-            while len(res) != 15:
-                res.append((0, 0, 0.0, 0.0, 0.0, 0.0, 0.0))
-        else:
-            for key in data_dict:
-                res.append((key[0], key[1],  data_dict[key][0], data_dict[key][1]))
-            while len(res) != 15:
-                res.append((0, 0, 0.0, 0.0))
+        for key in data_dict:
+            res.append((key[0], key[1],  data_dict[key][0], data_dict[key][1]))
+        while len(res) != 15:
+            res.append((0, 0, 0.0, 0.0))
         result.append(res)
     return result
 
-def dict_to_list_name(data):
+def dict_to_list_name(data, output_attention):
     result = list()
     for data_dict in data:
         res = list()    
@@ -102,9 +90,10 @@ def dict_to_list_name(data):
             all_.append(data_dict[key][6])
             res.append(all_)
         z = list()
-        # while len(z) != 33:
-        while len(z) != 75:
-        # while len(z) != 195:
+        z_size = 33
+        if output_attention == "V2":
+            z_size = 75
+        while len(z) != z_size:
             z.append(0)
         while len(res) != 15:
             res.append(z)
@@ -124,7 +113,7 @@ def dict_to_list_score(data):
 
 def generate_dataset(
     # data, seq_len, pre_len, time_len=None, split_ratio=0.8, normalize=True
-    data, y, split_ratio=0.8, normalize=True
+    data, y, output_attention, split_ratio=0.8, normalize=True
 ):
     """
     :param data: feature matrix
@@ -141,16 +130,13 @@ def generate_dataset(
         for i in range(data.shape[2]):
             m = np.max(data[:, :, i])
             data[:, :, i] = data[:, :, i] / float(m)
-        # max_val = np.max(data)
-        # print(max_val)
-        # data = data / max_val
 
     train_size = int(data_len * split_ratio)
     train_data = data[:train_size]
     test_data = data[train_size:data_len]
     # y = dict_to_list(y)
     # y = dict_to_list_score(y)
-    y = dict_to_list_name(y)
+    y = dict_to_list_name(y, output_attention)
     train_y = y[:train_size]
     test_y = y[train_size:data_len]
     train_X, train_Y, test_X, test_Y = list(), list(), list(), list()
@@ -188,11 +174,12 @@ def generate_dataset_T2T(
     return np.array(train_X), np.array(train_Y), np.array(test_X), np.array(test_Y)
 
 def generate_torch_datasets(
-    data, y, split_ratio=0.8, normalize=True
+    data, y, output_attention, split_ratio=0.8, normalize=True
 ):
     train_X, train_Y, test_X, test_Y = generate_dataset(
         data,
         y, 
+        output_attention,
         split_ratio=split_ratio,
         normalize=normalize,
     )

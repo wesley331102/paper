@@ -561,44 +561,6 @@ class OutputAttentionV2Layer(nn.Module):
         aggr_outputs = torch.flatten(scored_outputs)
         return aggr_outputs
 
-class OutputAttentionV3Layer(nn.Module):
-    def __init__(self, hidden_dim: int, attention_dim: int, **kwargs):
-        super(OutputAttentionV3Layer, self).__init__(**kwargs)
-        # hidden dimension
-        self._hidden_dim = hidden_dim
-        # attention dimension
-        self._attention_dim = attention_dim
-        # weight (hidden dimension * attention dimension)
-        self.w1 = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._attention_dim))
-        # weight (attention dimension * attention dimension)
-        self.w2 = nn.Parameter(torch.FloatTensor(self._attention_dim, self._attention_dim))
-        # weight (attention dimension * 1)
-        self.w3 = nn.Parameter(torch.FloatTensor(self._attention_dim, 1))
-        # initialize parameters
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.w1)
-        nn.init.xavier_uniform_(self.w2)
-        nn.init.xavier_uniform_(self.w3)
-        
-    def forward(self, inputs, hidden_state, unit_dim = 14):
-        # num of nodes * hidden dimension
-        inputs = inputs.reshape((unit_dim, self._hidden_dim))
-        # num of nodes * attention dimension
-        hidden_state = hidden_state.reshape((1, self._attention_dim)).repeat((unit_dim, 1)).reshape((unit_dim, self._attention_dim))
-        # num of nodes * attention dimension
-        u = torch.tanh(torch.matmul(inputs, self.w1) + torch.matmul(hidden_state, self.w2))
-        # num of nodes * 1
-        attn = torch.matmul(u, self.w3)
-        # num of nodes * 1
-        attn_score = F.softmax(attn, dim=1)
-        # num of nodes * hidden dimension
-        scored_outputs = inputs * attn_score
-        # num of nodes * hidden dimension
-        aggr_outputs = torch.flatten(scored_outputs)
-        return aggr_outputs
-    
 class OutputCoAttentionLayer(nn.Module):
     def __init__(self, hidden_size: int, history_hidden_size: int, hidden_dim: int, co_attention_dim: int = 32):
         super(OutputCoAttentionLayer, self).__init__()
@@ -657,7 +619,7 @@ class OutputCoAttentionLayer(nn.Module):
         return co_attention_hidden_state_output, co_attention_history_hidden_state_output
 
 class BGCN(nn.Module):
-    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, adj_3: np.ndarray, adj_4: np.ndarray, adj_5: np.ndarray, feat: np.ndarray, team_2_player: dict, aspect_num: int, hidden_dim: int, co_attention_dim: int, applying_player: bool, applying_attention: bool, aspect_dim: int = 16, **kwargs):
+    def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, adj_3: np.ndarray, adj_4: np.ndarray, adj_5: np.ndarray, team_2_player: dict, aspect_num: int, hidden_dim: int, co_attention_dim: int, applying_player: bool, applying_attention: bool, aspect_dim: int = 16, **kwargs):
         super(BGCN, self).__init__()
         # applying RGCN
         self._applying_player = applying_player
