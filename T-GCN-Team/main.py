@@ -32,6 +32,8 @@ def get_attentionLayer(args):
         return models.OutputAttentionV2Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*7), attention_mul=False)
     elif args.output_attention == "co":
         return models.OutputCoAttentionLayer(hidden_size=7, history_hidden_size=12, hidden_dim=args.hidden_dim)
+    else:
+        return None
 
 def get_task(args, model, attentionLayer, dm):
     task = getattr(tasks, args.settings.capitalize() + "ForecastTask")(

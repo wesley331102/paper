@@ -19,7 +19,7 @@ class SupervisedForecastTask(pl.LightningModule):
         team_2_player: dict = {},
         t_dim: int = 0,
         p_dim: int = 0,
-        output_attention: str = "V2",
+        output_attention: str = "None",
         model_name: str = "BGCN",
         **kwargs
     ):
@@ -34,21 +34,22 @@ class SupervisedForecastTask(pl.LightningModule):
         self._loss = loss
         self.team_2_player = dict_processing_loss(team_2_player, t_dim, p_dim)
 
-        # TODO using history
-        if self.output_attention in ["self", "V1", "V2", "V2_reverse", "co"]:
+        if self.output_attention in ["None", "self", "V1", "V2", "V2_reverse", "co"]:
             self.lt1 = nn.Linear(5, 16)
             self.lt2 = nn.Linear(3, 16)
             self.lt3 = nn.Linear(2, 16)
             self.lt4 = nn.Linear(1, 16)
 
         if self.applying_player:
-            if model_name == "BGCN":
+            if model_name in ["GRU", "BGCN"]:
                 if self.output_attention in ["self", "V1", "V2"]:
                     self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
                 elif self.output_attention == "co":
                     self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*38
                 elif self.output_attention == "V2_reverse":
                     self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*24
+                else:
+                    self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
                 self.regressor1 = nn.Linear(
                     self.MLP_input_dim,
                     256
@@ -67,19 +68,26 @@ class SupervisedForecastTask(pl.LightningModule):
                 )
             elif model_name == "T2TGRU":
                 self.regressor1 = nn.Linear(
-                        self.model.hyperparameters.get("hidden_dim"),
-                        8,
+                    self.model.hyperparameters.get("hidden_dim"),
+                    8,
                 )
                 self.regressor2 = nn.Linear(
-                        8,
-                        1,
-                )
-        else:
-            # TODO only team
-            self.regressor = nn.Linear(
-                    self.model.hyperparameters.get("hidden_dim")*2,
+                    8,
                     1,
                 )
+        else:
+            self.regressor1 = nn.Linear(
+                self.model.hyperparameters.get("hidden_dim")*4,
+                64,
+            )
+            self.regressor2 = nn.Linear(
+                64,
+                8,
+            )
+            self.regressor3 = nn.Linear(
+                8,
+                1,
+            )
 
     def mask_aspect(self, feature_dim, weight, feature_index, aspect_dim):
         aspect_weight = weight.transpose(0, 1)
@@ -112,8 +120,8 @@ class SupervisedForecastTask(pl.LightningModule):
             return utils.losses.nba_mae_with_player_with_regularizer_loss_T2T(inputs, targets, self)  
         if self.applying_player:
             return utils.losses.nba_loss_funtion_with_regularizer_loss(inputs, targets, self, self._loss, self.output_attention)
-        # else TODO
-
+        if self.applying_player == False:
+            return utils.losses.nba_loss_funtion_with_regularizer_loss_only_team(inputs, targets, self, self._loss)
         raise NameError("Loss not supported:", self._loss)
 
     def training_step(self, batch, batch_idx):
@@ -153,5 +161,5 @@ class SupervisedForecastTask(pl.LightningModule):
         parser.add_argument("--learning_rate", "--lr", type=float, default=1e-3)
         parser.add_argument("--weight_decay", "--wd", type=float, default=1.5e-3)
         parser.add_argument("--loss", type=str, default="mse")
-        parser.add_argument("--output_attention", type=str, default="V2")
+        parser.add_argument("--output_attention", type=str, default="None")
         return parser

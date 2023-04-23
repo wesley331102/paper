@@ -51,7 +51,6 @@ class GRULinear(nn.Module):
 
     def hyperparameters(self):
         return {
-            "num_gru_units": self._num_gru_units,
             "output_dim": self._output_dim,
             "bias_init_value": self._bias_init_value,
         }
@@ -156,11 +155,12 @@ class GRU(nn.Module):
     def add_model_specific_arguments(parent_parser):
         parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--hidden_dim", type=int, default=64)
+        parser.add_argument("--applying_player", action="store_true")
         return parser
 
     @property
     def hyperparameters(self):
         return {
             "input_dim": self._input_dim, 
-            "hidden_dim": self._hidden_dim
+            "hidden_dim": self._hidden_dim,
         }

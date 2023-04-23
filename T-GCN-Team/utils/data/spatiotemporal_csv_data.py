@@ -24,7 +24,7 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         split_ratio: float = 0.8,
         normalize: bool = True,
         T2T: bool = False,
-        output_attention: str = "V2",
+        output_attention: str = "None",
         **kwargs
     ):
         super(SpatioTemporalCSVDataModule, self).__init__()

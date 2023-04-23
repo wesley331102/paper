@@ -2,7 +2,7 @@ import torch
 import math
 import numpy as np
 
-def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str="nba_mae", output_attention:str="V2", lamda=1.5e-3):
+def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str="nba_mae", output_attention:str="None", lamda=1.5e-3):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
     game = 0.0
@@ -39,7 +39,7 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                 team_2_mean = torch.mean(inp[team_2_list_b], dim=0)
                 com = torch.zeros(0)
                 # delete
-                if output_attention in ["self", "V1", "V2"]:
+                if output_attention in ["self", "V1", "V2", "None"]:
                     team_1_ave = t[j][33:53]
                     team_2_ave = t[j][53:73]
                     ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
@@ -68,6 +68,11 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                         com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), torch.cat((team_1_ave_inputs, diff1, mul), 0))
                         com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), torch.cat((team_2_ave_inputs, diff2, mul), 0))
                         com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
+                    elif output_attention == "None":
+                        # no attention
+                        com1 = torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean, team_1_ave_inputs), 0)
+                        com2 = torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean, team_2_ave_inputs), 0)
+                        com = torch.cat((com1, com2), 0)
                 elif output_attention in ["V2_reverse", "co"]:
                     team_1_ave = t[j][33:113]
                     team_2_ave = t[j][113:193]
@@ -109,8 +114,6 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                         com1, ave1 = model.attentionLayer(com1, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0))
                         com2, ave2 = model.attentionLayer(com2, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0))
                         com = torch.flatten(torch.cat((com1, com2, ave1, ave2), 0))
-                # else:
-                    # without history
                     
                 r_y = model.regressor1(com)
                 r_y = model.regressor2(r_y)
@@ -119,7 +122,7 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                 if False in torch.isnan(r_y):
                     p.append(r_y)
                     y.append(t[j][2])
-                    if output_attention in ["self", "V1", "V2"]:
+                    if output_attention in ["self", "V1", "V2", "None"]:
                         if r_y > 0:
                             o.append(t[j][73])
                         else:
@@ -146,27 +149,56 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
 
     return loss + reg_loss, p, y, o
 
-def nba_rmse_with_regularizer_loss(inputs, targets, model, lamda=1.5e-3):
+def nba_loss_funtion_with_regularizer_loss_only_team(inputs, targets, model, loss_type:str="nba_mae", lamda=1.5e-3):
     assert inputs.shape[0] == targets.shape[0]
     leng = inputs.shape[0]
     game = 0.0
-    rmse_loss = 0.0
+    loss = 0.0
+    p, y, o = list(), list(), list()
     for i in range(leng):
         inp = inputs[i]
         t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
         for j in range(t.shape[0]):
             if t[j][0] != 0 or t[j][1] != 0:
-                com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])]), 0)
-                real_y = model.regressor(com)
-                rmse_loss += torch.sqrt((real_y - t[j][2]) ** 2)
-                game += 1
+                team_1_ave = t[j][33:53]
+                team_2_ave = t[j][53:73]
+                ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
+                ew = model.mask_aspect(20, model.lt2.weight, [10, 14, 15], 16)
+                dw = model.mask_aspect(20, model.lt3.weight, [13, 17], 16)
+                iw = model.mask_aspect(20, model.lt4.weight, [19], 16)
+                aw = torch.cat((ow, ew, dw, iw), dim=1)
+                ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
+                team_1_ave_inputs = team_1_ave @ aw + ab
+                team_2_ave_inputs = team_2_ave @ aw + ab
+                com1 = torch.cat((inp[int(t[j][0])], team_1_ave_inputs), 0)
+                com2 = torch.cat((inp[int(t[j][1])], team_2_ave_inputs), 0)
+                com = torch.cat((com1, com2), 0)
+                r_y = model.regressor1(com)
+                r_y = model.regressor2(r_y)
+                r_y = model.regressor3(r_y)
+                if False in torch.isnan(r_y):
+                    p.append(r_y)
+                    y.append(t[j][2])
+                    if r_y > 0:
+                        o.append(t[j][73])
+                    else:
+                        o.append(t[j][74])
+                    if loss_type == "nba_mae":
+                        loss += torch.sqrt((r_y - t[j][2]) ** 2)
+                    elif loss_type == "nba_rmse":
+                        loss += ((r_y - t[j][2]) ** 2)
+                    game += 1
 
-    rmse_loss = rmse_loss / game
+    loss = loss / game
+    if loss_type == "nba_rmse":
+        loss = torch.sqrt(loss)
+
     reg_loss = 0.0
     for param in model.parameters():
         reg_loss += torch.sum(param ** 2) / 2
     reg_loss = lamda * reg_loss
-    return rmse_loss + reg_loss
+
+    return loss + reg_loss, p, y, o
 
 def nba_output_with_player_T2T(inputs, targets, model):
     assert inputs.shape[0] == targets.shape[0]
