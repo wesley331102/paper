@@ -15,6 +15,21 @@
 You can also adjust the `--seq_len` parameters.
 
 ```bash
+# Basketball GRU only
+python main.py --model_name GRU --max_epochs 100 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba_score --settings supervised
+```
+
+```bash
+# Basketball T2T
+python main.py --model_name T2TGRU --max_epochs 100 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba_T2T --settings supervised
+```
+
+```bash
+# BGCN self attention
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention self --loss nba_mae --settings supervised 
+```
+
+```bash
 # BGCN attention V1
 python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention V1 --loss nba_mae --settings supervised 
 ```
@@ -25,16 +40,11 @@ python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight
 ```
 
 ```bash
+# BGCN attention V2_reverse
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention V2_reverse --loss nba_mae --settings supervised 
+```
+
+```bash
 # BGCN co-attention
 python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention co --loss nba_mae --settings supervised 
-```
-
-```bash
-# Basketball GRU only
-python main.py --model_name GRU --max_epochs 100 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba_score --settings supervised
-```
-
-```bash
-# Basketball T2T
-python main.py --model_name T2TGRU --max_epochs 100 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba_T2T --settings supervised
 ```

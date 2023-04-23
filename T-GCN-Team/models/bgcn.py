@@ -457,7 +457,7 @@ class SelfAttentionLayer(nn.Module):
         nn.init.xavier_uniform_(self.kw)
         nn.init.xavier_uniform_(self.vw)
         
-    def forward(self, inputs, unit_dim = 16):
+    def forward(self, inputs, unit_dim = 8):
         # num of nodes * hidden dimension
         inputs = inputs.reshape((unit_dim, self._hidden_dim))
         # num of nodes * hidden dimension
