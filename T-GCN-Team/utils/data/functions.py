@@ -58,13 +58,14 @@ def dict_to_list_name(data, output_attention):
     for data_dict in data:
         res = list()    
         for key in data_dict:
-            # if not (len(data_dict[key][3]) == 4):
-            #     data_dict[key][3].insert(0, data_dict[key][3][2])
-            # team_1_ave = [item for sublist in data_dict[key][3] for item in sublist]
-            # if not (len(data_dict[key][4]) == 4):
-            #     data_dict[key][4].insert(0, data_dict[key][4][2])
-            # team_2_ave = [item for sublist in data_dict[key][4] for item in sublist]
-            # assert len(team_1_ave) == 80 and len(team_2_ave) == 80
+            if output_attention == "co":
+                if not (len(data_dict[key][3]) == 4):
+                    data_dict[key][3].insert(0, data_dict[key][3][2])
+                team_1_ave = [item for sublist in data_dict[key][3] for item in sublist]
+                if not (len(data_dict[key][4]) == 4):
+                    data_dict[key][4].insert(0, data_dict[key][4][2])
+                team_2_ave = [item for sublist in data_dict[key][4] for item in sublist]
+                assert len(team_1_ave) == 80 and len(team_2_ave) == 80
 
             k1 = list()
             k1.extend(data_dict[key][1])
@@ -80,18 +81,21 @@ def dict_to_list_name(data, output_attention):
             all_.append(data_dict[key][0])
             all_.extend(k1)
             all_.extend(k2)
-            # delete
-            all_.extend(data_dict[key][3])
-            all_.extend(data_dict[key][4])
-            # all_.extend(team_1_ave)
-            # all_.extend(team_2_ave)
+            if output_attention == "co":
+                all_.extend(team_1_ave)
+                all_.extend(team_2_ave)
+            else:
+                all_.extend(data_dict[key][3])
+                all_.extend(data_dict[key][4])
             # odds
             all_.append(data_dict[key][5])
             all_.append(data_dict[key][6])
             res.append(all_)
         z = list()
         z_size = 33
-        if output_attention == "V2":
+        if output_attention == "co":
+            z_size = 195
+        else:
             z_size = 75
         while len(z) != z_size:
             z.append(0)

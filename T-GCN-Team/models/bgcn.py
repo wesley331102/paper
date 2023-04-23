@@ -476,9 +476,9 @@ class SelfAttentionLayer(nn.Module):
         scored_outputs = torch.flatten(scored_outputs)
         return scored_outputs
     
-class OutputAttentionLayer(nn.Module):
+class OutputAttentionV1Layer(nn.Module):
     def __init__(self, hidden_dim: int, **kwargs):
-        super(OutputAttentionLayer, self).__init__(**kwargs)
+        super(OutputAttentionV1Layer, self).__init__(**kwargs)
         # hidden dimension
         self._hidden_dim = hidden_dim
         # weight (hidden dimension)
@@ -551,8 +551,6 @@ class OutputAttentionV2Layer(nn.Module):
             u = torch.tanh(torch.matmul(inputs, self.w1) + torch.matmul(hidden_state, self.w2))
             # num of nodes * 1
             attn = torch.matmul(u, self.w3)
-        # using square
-        # attn = torch.square(attn)
         # num of nodes * 1
         attn_score = F.softmax(attn, dim=1)
         # num of nodes * hidden dimension

@@ -25,7 +25,7 @@ def get_attentionLayer(args):
     if args.output_attention == "self":
         return models.SelfAttentionLayer(hidden_dim=args.hidden_dim)
     elif args.output_attention == "V1":
-        return models.OutputAttentionLayer(hidden_dim=args.hidden_dim)
+        return models.OutputAttentionV1Layer(hidden_dim=args.hidden_dim)
     elif args.output_attention == "V2":
         return models.OutputAttentionV2Layer(hidden_dim=args.hidden_dim, attention_dim=((args.hidden_dim)*3), attention_mul=False)
     elif args.output_attention == "V2_oppo":
@@ -50,6 +50,7 @@ def get_callbacks(args):
 
 
 def main_supervised(args):
+    y_path = os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p') if args.output_attention == "co" else os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p')
     dm = utils.data.SpatioTemporalCSVDataModule(
         # 17-18
         # feat_path=os.path.join('data', 'new_team_list_other_n.p'), 
@@ -101,8 +102,7 @@ def main_supervised(args):
         feat_path=os.path.join('data', '21_22', 'new_team_list_other_n.p'), 
         p_feat_path=os.path.join('data', '21_22', 'new_player_list_other_n.p'),
         player_team_path=os.path.join('data', '21_22', 'player_to_team_dict.p'),
-        y_path=os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p'), 
-        # y_path=os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p'), 
+        y_path=y_path,
         adj_path=os.path.join('data', '21_22', 'team_adj.csv'), 
         adj_1_path=os.path.join('data', '21_22', 'pass_adj.csv'),
         adj_2_path=os.path.join('data', '21_22', 'ast_adj.csv'),

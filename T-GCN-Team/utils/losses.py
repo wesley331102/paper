@@ -39,7 +39,7 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                 team_2_mean = torch.mean(inp[team_2_list_b], dim=0)
                 com = torch.zeros(0)
                 # delete
-                if output_attention in ["V2"]:
+                if output_attention in ["V1", "V2"]:
                     team_1_ave = t[j][33:53]
                     team_2_ave = t[j][53:73]
                     ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
@@ -51,8 +51,13 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                     team_1_ave_inputs = team_1_ave @ aw + ab
                     team_2_ave_inputs = team_2_ave @ aw + ab
                     # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean, team_1_ave_inputs, team_2_ave_inputs), 0)
-                    if output_attention == "V2":
-                        ## output attention V2
+                    if output_attention == "V1":
+                        # output attention V1
+                        com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), team_1_ave_inputs)
+                        com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), team_2_ave_inputs)
+                        com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
+                    elif output_attention == "V2":
+                        # output attention V2
                         diff1 = torch.sub(team_1_ave_inputs, team_2_ave_inputs)
                         diff2 = torch.sub(team_2_ave_inputs, team_1_ave_inputs)
                         mul = torch.mul(team_1_ave_inputs, team_2_ave_inputs)
@@ -61,10 +66,6 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                         com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
                 # ## self attention
                 # com = model.attentionLayer(com)
-                # output attention
-                # com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), team_1_ave_inputs)
-                # com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), team_2_ave_inputs)
-                # com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
                 
                 ## output attention V3
                 # diff1 = torch.sub(team_1_ave_inputs, team_2_ave_inputs)
@@ -73,46 +74,46 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                 # com = torch.cat((inp[int(t[j][0])], inp[int(t[j][1])], st11, st12, st13, st14, st15, st21, st22, st23, st24, st25, team_1_mean, team_2_mean), 0)
                 # com = model.attentionLayer(com, torch.cat((team_1_ave_inputs, team_2_ave_inputs, diff1, diff2, mul), 0))
                 # com = torch.cat((com, team_1_ave_inputs, team_2_ave_inputs), 0)
-
-                # oppo
-                # team_1_ave = t[j][33:113]
-                # team_2_ave = t[j][113:193]
-                # ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
-                # ew = model.mask_aspect(20, model.lt2.weight, [10, 14, 15], 16)
-                # dw = model.mask_aspect(20, model.lt3.weight, [13, 17], 16)
-                # iw = model.mask_aspect(20, model.lt4.weight, [19], 16)
-                # aw = torch.cat((ow, ew, dw, iw), dim=1)
-                # ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
-                # team_1_1_inputs = team_1_ave[:20] @ aw + ab
-                # team_2_1_inputs = team_2_ave[:20] @ aw + ab
-                # team_1_2_inputs = team_1_ave[20:40] @ aw + ab
-                # team_2_2_inputs = team_2_ave[20:40] @ aw + ab
-                # team_1_3_inputs = team_1_ave[40:60] @ aw + ab
-                # team_2_3_inputs = team_2_ave[40:60] @ aw + ab
-                # team_1_ave_inputs = team_1_ave[60:80] @ aw + ab
-                # team_2_ave_inputs = team_2_ave[60:80] @ aw + ab
-                # com1 = torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0)
-                # com2 = torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0)
-                # diff1_1 = torch.sub(team_1_1_inputs, team_2_1_inputs)
-                # diff2_1 = torch.sub(team_2_1_inputs, team_1_1_inputs)
-                # mul_1 = torch.mul(team_1_1_inputs, team_2_1_inputs)
-                # diff1_2 = torch.sub(team_1_2_inputs, team_2_2_inputs)
-                # diff2_2 = torch.sub(team_2_2_inputs, team_1_2_inputs)
-                # mul_2 = torch.mul(team_1_2_inputs, team_2_2_inputs)
-                # diff1_3 = torch.sub(team_1_3_inputs, team_2_3_inputs)
-                # diff2_3 = torch.sub(team_2_3_inputs, team_1_3_inputs)
-                # mul_3 = torch.mul(team_1_3_inputs, team_2_3_inputs)
-                # diff1_ave = torch.sub(team_1_ave_inputs, team_2_ave_inputs)
-                # diff2_ave = torch.sub(team_2_ave_inputs, team_1_ave_inputs)
-                # mul_ave = torch.mul(team_1_ave_inputs, team_2_ave_inputs)
-                ## output attention
-                # com1 = model.attentionLayer(torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0), com1, 12)
-                # com2 = model.attentionLayer(torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0), com2, 12)
-                # com = torch.cat((com1, com2), 0)
-                ## co-attention
-                # com1, ave1 = model.attentionLayer(com1, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0))
-                # com2, ave2 = model.attentionLayer(com2, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0))
-                # com = torch.flatten(torch.cat((com1, com2, ave1, ave2), 0))
+                elif output_attention in ["co"]:
+                    team_1_ave = t[j][33:113]
+                    team_2_ave = t[j][113:193]
+                    ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
+                    ew = model.mask_aspect(20, model.lt2.weight, [10, 14, 15], 16)
+                    dw = model.mask_aspect(20, model.lt3.weight, [13, 17], 16)
+                    iw = model.mask_aspect(20, model.lt4.weight, [19], 16)
+                    aw = torch.cat((ow, ew, dw, iw), dim=1)
+                    ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
+                    team_1_1_inputs = team_1_ave[:20] @ aw + ab
+                    team_2_1_inputs = team_2_ave[:20] @ aw + ab
+                    team_1_2_inputs = team_1_ave[20:40] @ aw + ab
+                    team_2_2_inputs = team_2_ave[20:40] @ aw + ab
+                    team_1_3_inputs = team_1_ave[40:60] @ aw + ab
+                    team_2_3_inputs = team_2_ave[40:60] @ aw + ab
+                    team_1_ave_inputs = team_1_ave[60:80] @ aw + ab
+                    team_2_ave_inputs = team_2_ave[60:80] @ aw + ab
+                    com1 = torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0)
+                    com2 = torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0)
+                    diff1_1 = torch.sub(team_1_1_inputs, team_2_1_inputs)
+                    diff2_1 = torch.sub(team_2_1_inputs, team_1_1_inputs)
+                    mul_1 = torch.mul(team_1_1_inputs, team_2_1_inputs)
+                    diff1_2 = torch.sub(team_1_2_inputs, team_2_2_inputs)
+                    diff2_2 = torch.sub(team_2_2_inputs, team_1_2_inputs)
+                    mul_2 = torch.mul(team_1_2_inputs, team_2_2_inputs)
+                    diff1_3 = torch.sub(team_1_3_inputs, team_2_3_inputs)
+                    diff2_3 = torch.sub(team_2_3_inputs, team_1_3_inputs)
+                    mul_3 = torch.mul(team_1_3_inputs, team_2_3_inputs)
+                    diff1_ave = torch.sub(team_1_ave_inputs, team_2_ave_inputs)
+                    diff2_ave = torch.sub(team_2_ave_inputs, team_1_ave_inputs)
+                    mul_ave = torch.mul(team_1_ave_inputs, team_2_ave_inputs)
+                    if output_attention == "co":
+                        # output co-attention
+                        com1, ave1 = model.attentionLayer(com1, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0))
+                        com2, ave2 = model.attentionLayer(com2, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0))
+                        com = torch.flatten(torch.cat((com1, com2, ave1, ave2), 0))
+                        ## output attention
+                        # com1 = model.attentionLayer(torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0), com1, 12)
+                        # com2 = model.attentionLayer(torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0), com2, 12)
+                        # com = torch.cat((com1, com2), 0)
 
                 r_y = model.regressor1(com)
                 r_y = model.regressor2(r_y)
@@ -121,16 +122,16 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                 if False in torch.isnan(r_y):
                     p.append(r_y)
                     y.append(t[j][2])
-                    if output_attention in ["V2"]:
+                    if output_attention in ["V1", "V2"]:
                         if r_y > 0:
                             o.append(t[j][73])
                         else:
                             o.append(t[j][74])
-                    # else:
-                    #     if r_y > 0:
-                    #         o.append(t[j][193])
-                    #     else:
-                    #         o.append(t[j][194])
+                    elif output_attention in ["co"]:
+                        if r_y > 0:
+                            o.append(t[j][193])
+                        else:
+                            o.append(t[j][194])
                     if loss_type == "nba_mae":
                         loss += torch.sqrt((r_y - t[j][2]) ** 2)
                     elif loss_type == "nba_rmse":

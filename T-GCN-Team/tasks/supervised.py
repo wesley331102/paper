@@ -35,7 +35,7 @@ class SupervisedForecastTask(pl.LightningModule):
         self.team_2_player = dict_processing_loss(team_2_player, t_dim, p_dim)
 
         # TODO using history
-        if self.output_attention in ["V2"]:
+        if self.output_attention in ["V1", "V2", "co"]:
             self.lt1 = nn.Linear(5, 16)
             self.lt2 = nn.Linear(3, 16)
             self.lt3 = nn.Linear(2, 16)
@@ -43,9 +43,10 @@ class SupervisedForecastTask(pl.LightningModule):
 
         if self.applying_player:
             if model_name == "BGCN":
-                if self.output_attention == "V2":
+                if self.output_attention in ["V1", "V2"]:
                     self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
-                # TODO attention
+                elif self.output_attention == "co":
+                    self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*38
                 self.regressor1 = nn.Linear(
                     self.MLP_input_dim,
                     256
