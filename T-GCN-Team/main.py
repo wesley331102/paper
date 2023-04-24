@@ -11,8 +11,6 @@ import os
 
 def get_model(args, dm):
     model = None
-    if args.model_name == "GCN":
-        model = models.GCN(adj=dm.adj, input_dim=args.seq_len, output_dim=args.hidden_dim)
     if args.model_name == "GRU":
         model = models.GRU(input_dim=dm.adj.shape[0]+dm.adj_1.shape[0], hidden_dim=args.hidden_dim)
     if args.model_name == "BGCN":
@@ -52,59 +50,21 @@ def get_callbacks(args):
 
 
 def main_supervised(args):
-    y_path = os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p') if args.output_attention in ["V2_reverse", "co"] else os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p')
+    if args.model_name == "T2TGRU":
+        feat_path = os.path.join('data', 'T2T', 'x_feat.p')
+        y_path = os.path.join('data', 'T2T', 'y_feat_odds.p')
+        T2T_flag = True
+    else:
+        feat_path = os.path.join('data', '21_22', 'new_team_list_other_n.p')
+        y_path = os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p') if args.output_attention in ["V2_reverse", "co"] else os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p')
+        T2T_flag=False
+
     dm = utils.data.SpatioTemporalCSVDataModule(
-        # 17-18
-        # feat_path=os.path.join('data', 'new_team_list_other_n.p'), 
-        # p_feat_path=os.path.join('data', 'new_player_list_other_n.p'),
-        # player_team_path=os.path.join('data', 'player_team_dict.p'),
-        # y_path=os.path.join('data', 'team_list_y_win_rate.p'), 
-        # adj_path=os.path.join('data', 'team_adj.csv'), 
-        # adj_1_path=os.path.join('data', 'pass_adj.csv'),
-        # adj_2_path=os.path.join('data', 'ast_adj.csv'),
-        # adj_3_path=os.path.join('data', 'def_adj.csv'),
-        # adj_4_path=os.path.join('data', 'blk_adj.csv'),
-        # adj_5_path=os.path.join('data', 'pf_adj.csv'),
-        # T2T
-        # feat_path=os.path.join('data', 'T2T', 'x_feat.p'), 
-        # y_path=os.path.join('data', 'T2T', 'y_feat.p'), 
-        # T2T=True,
-        # # useless path
-        # p_feat_path=os.path.join('data', '19_20', 'new_player_list_other_n.p'),
-        # player_team_path=os.path.join('data', '19_20', 'player_to_team_dict.p'),
-        # adj_path=os.path.join('data', '19_20', 'team_adj.csv'), 
-        # adj_1_path=os.path.join('data', '19_20', 'pass_adj.csv'),
-        # adj_2_path=os.path.join('data', '19_20', 'ast_adj.csv'),
-        # adj_3_path=os.path.join('data', '19_20', 'def_adj.csv'),
-        # adj_4_path=os.path.join('data', '19_20', 'blk_adj.csv'),
-        # adj_5_path=os.path.join('data', '19_20', 'pf_adj.csv'),
-        # 19-20
-        # feat_path=os.path.join('data', '19_20', 'new_team_list_other_n.p'), 
-        # p_feat_path=os.path.join('data', '19_20', 'new_player_list_other_n.p'),
-        # player_team_path=os.path.join('data', '19_20', 'player_to_team_dict.p'),
-        # y_path=os.path.join('data', '19_20', 'team_list_y_namenum.p'), 
-        # adj_path=os.path.join('data', '19_20', 'team_adj.csv'), 
-        # adj_1_path=os.path.join('data', '19_20', 'pass_adj.csv'),
-        # adj_2_path=os.path.join('data', '19_20', 'ast_adj.csv'),
-        # adj_3_path=os.path.join('data', '19_20', 'def_adj.csv'),
-        # adj_4_path=os.path.join('data', '19_20', 'blk_adj.csv'),
-        # adj_5_path=os.path.join('data', '19_20', 'pf_adj.csv'),
-        # 20-21
-        # feat_path=os.path.join('data', '20_21', 'new_team_list_other_n.p'), 
-        # p_feat_path=os.path.join('data', '20_21', 'new_player_list_other_n.p'),
-        # player_team_path=os.path.join('data', '20_21', 'player_to_team_dict.p'),
-        # y_path=os.path.join('data', '20_21', 'team_list_y_namenum.p'), 
-        # adj_path=os.path.join('data', '20_21', 'team_adj.csv'), 
-        # adj_1_path=os.path.join('data', '20_21', 'pass_adj.csv'),
-        # adj_2_path=os.path.join('data', '20_21', 'ast_adj.csv'),
-        # adj_3_path=os.path.join('data', '20_21', 'def_adj.csv'),
-        # adj_4_path=os.path.join('data', '20_21', 'blk_adj.csv'),
-        # adj_5_path=os.path.join('data', '20_21', 'pf_adj.csv'),
-        # 21-22
-        feat_path=os.path.join('data', '21_22', 'new_team_list_other_n.p'), 
+        feat_path=feat_path, 
         p_feat_path=os.path.join('data', '21_22', 'new_player_list_other_n.p'),
         player_team_path=os.path.join('data', '21_22', 'player_to_team_dict.p'),
         y_path=y_path,
+        T2T=T2T_flag,
         adj_path=os.path.join('data', '21_22', 'team_adj.csv'), 
         adj_1_path=os.path.join('data', '21_22', 'pass_adj.csv'),
         adj_2_path=os.path.join('data', '21_22', 'ast_adj.csv'),

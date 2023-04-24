@@ -12,11 +12,9 @@
 
 ## Model Training
 
-You can also adjust the `--seq_len` parameters.
-
 ```bash
 # Basketball T2T
-python main.py --model_name T2TGRU --max_epochs 100 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba_T2T --settings supervised
+python main.py --model_name T2TGRU --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba_T2T --settings supervised
 ```
 
 ```bash

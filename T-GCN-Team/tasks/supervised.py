@@ -41,40 +41,39 @@ class SupervisedForecastTask(pl.LightningModule):
             self.lt4 = nn.Linear(1, 16)
 
         if self.applying_player:
-            if model_name in ["GRU", "BGCN"]:
-                if self.output_attention in ["self", "V1", "V2"]:
-                    self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
-                elif self.output_attention == "co":
-                    self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*38
-                elif self.output_attention == "V2_reverse":
-                    self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*24
-                else:
-                    self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
-                self.regressor1 = nn.Linear(
-                    self.MLP_input_dim,
-                    256
-                )
-                self.regressor2 = nn.Linear(
-                    256,
-                    64,
-                )
-                self.regressor3 = nn.Linear(
-                    64,
-                    8,
-                )
-                self.regressor4 = nn.Linear(
-                    8,
-                    1,
-                )
-            elif model_name == "T2TGRU":
-                self.regressor1 = nn.Linear(
-                    self.model.hyperparameters.get("hidden_dim"),
-                    8,
-                )
-                self.regressor2 = nn.Linear(
-                    8,
-                    1,
-                )
+            if self.output_attention in ["self", "V1", "V2"]:
+                self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
+            elif self.output_attention == "co":
+                self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*38
+            elif self.output_attention == "V2_reverse":
+                self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*24
+            else:
+                self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
+            self.regressor1 = nn.Linear(
+                self.MLP_input_dim,
+                256
+            )
+            self.regressor2 = nn.Linear(
+                256,
+                64,
+            )
+            self.regressor3 = nn.Linear(
+                64,
+                8,
+            )
+            self.regressor4 = nn.Linear(
+                8,
+                1,
+            )
+        elif model_name == "T2TGRU":
+            self.regressor1 = nn.Linear(
+                self.model.hyperparameters.get("hidden_dim"),
+                8,
+            )
+            self.regressor2 = nn.Linear(
+                8,
+                1,
+            )
         else:
             self.regressor1 = nn.Linear(
                 self.model.hyperparameters.get("hidden_dim")*4,
@@ -116,8 +115,7 @@ class SupervisedForecastTask(pl.LightningModule):
 
     def loss(self, inputs, targets):
         if self._loss == 'nba_T2T':
-            # TODO
-            return utils.losses.nba_mae_with_player_with_regularizer_loss_T2T(inputs, targets, self)  
+            return utils.losses.nba_loss_funtion_with_regularizer_loss_T2T(inputs, targets, self)  
         if self.applying_player:
             return utils.losses.nba_loss_funtion_with_regularizer_loss(inputs, targets, self, self._loss, self.output_attention)
         if self.applying_player == False:

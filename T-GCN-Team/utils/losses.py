@@ -200,15 +200,34 @@ def nba_loss_funtion_with_regularizer_loss_only_team(inputs, targets, model, los
 
     return loss + reg_loss, p, y, o
 
-def nba_output_with_player_T2T(inputs, targets, model):
-    assert inputs.shape[0] == targets.shape[0]
+def nba_loss_funtion_with_regularizer_loss_T2T(inputs, targets, model, loss_type:str="nba_mae", lamda=1.5e-3):
     leng = inputs.shape[0]
-    p, y = list(), list()
-
+    game = 0.0
+    loss = 0.0
+    p, y, o = list(), list(), list()
     for i in range(leng):
-        real_y = model.regressor1(inputs[i])
-        real_y = model.regressor2(real_y)
-        p.append(real_y)
-        y.append(targets[i])
+        r_y = model.regressor1(inputs[i])
+        r_y = model.regressor2(r_y)
+        if False in torch.isnan(r_y):
+            p.append(r_y)
+            y.append(targets[i][0])
+            if r_y > 0:
+                o.append(targets[i][1])
+            else:
+                o.append(targets[i][2])
+            if loss_type == "nba_mae":
+                loss += torch.sqrt((r_y - targets[i][0]) ** 2)
+            elif loss_type == "nba_rmse":
+                loss += ((r_y - targets[i][0]) ** 2)
+            game += 1
 
-    return p, y
+    loss = loss / game
+    if loss_type == "nba_rmse":
+        loss = torch.sqrt(loss)
+
+    reg_loss = 0.0
+    for param in model.parameters():
+        reg_loss += torch.sum(param ** 2) / 2
+    reg_loss = lamda * reg_loss
+
+    return loss + reg_loss, p, y, o

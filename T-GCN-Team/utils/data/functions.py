@@ -104,17 +104,6 @@ def dict_to_list_name(data, output_attention):
         result.append(res)
     return result
 
-def dict_to_list_score(data):
-    result = list()
-    for data_dict in data:
-        res = list()
-        for key in data_dict:
-            res.append((key[0], key[1],  data_dict[key][0], data_dict[key][1]))
-        while len(res) != 15:
-            res.append((0, 0, 0.0, 0.0))
-        result.append(res)
-    return result
-
 def generate_dataset(
     # data, seq_len, pre_len, time_len=None, split_ratio=0.8, normalize=True
     data, y, output_attention, split_ratio=0.8, normalize=True
@@ -138,8 +127,6 @@ def generate_dataset(
     train_size = int(data_len * split_ratio)
     train_data = data[:train_size]
     test_data = data[train_size:data_len]
-    # y = dict_to_list(y)
-    # y = dict_to_list_score(y)
     y = dict_to_list_name(y, output_attention)
     train_y = y[:train_size]
     test_y = y[train_size:data_len]
