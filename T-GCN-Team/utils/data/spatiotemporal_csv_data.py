@@ -18,6 +18,8 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         adj_3_path: str,
         adj_4_path: str,
         adj_5_path: str,
+        feat_path_test: str = "None",
+        y_path_test: str = "None",
         batch_size: int = 64,
         seq_len: int = 12,
         pre_len: int = 1,
@@ -47,6 +49,8 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
         if self.T2T:
             self._feat = utils.data.functions.load_T2T_features(self._feat_path)
             self._y = utils.data.functions.load_T2T_targets(self._y_path)
+            self._feat_test = utils.data.functions.load_T2T_features(feat_path_test)
+            self._y_test = utils.data.functions.load_T2T_targets(y_path_test)
         else:
             self._feat = utils.data.functions.load_features(self._feat_path, self._p_feat_path)
             self._y = utils.data.functions.load_targets(self._y_path)
@@ -76,6 +80,8 @@ class SpatioTemporalCSVDataModule(pl.LightningDataModule):
             ) = utils.data.functions.generate_torch_datasets_T2T(
                 self._feat,
                 self._y,
+                self._feat_test,
+                self._y_test,
                 split_ratio=self.split_ratio,
                 normalize=self.normalize,
             )

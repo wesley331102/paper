@@ -125,6 +125,7 @@ def generate_dataset(
             data[:, :, i] = data[:, :, i] / float(m)
 
     train_size = int(data_len * split_ratio)
+    print('===', data_len)
     train_data = data[:train_size]
     test_data = data[train_size:data_len]
     y = dict_to_list_name(y, output_attention)
@@ -142,26 +143,25 @@ def generate_dataset(
     return np.array(train_X), train_Y, np.array(test_X), test_Y
 
 def generate_dataset_T2T(
-    data, y, split_ratio=0.8, normalize=True
+    data, y, data_test, y_test, split_ratio=0.8, normalize=True
 ):
-    data_len = data.shape[0]
+    train_data_len = data.shape[0]
+    test_data_len = data_test.shape[0]
     if normalize:
         for i in range(data.shape[2]):
             m = np.max(data[:, :, i])
             data[:, :, i] = data[:, :, i] / float(m)
+        for i in range(data_test.shape[2]):
+            m = np.max(data_test[:, :, i])
+            data_test[:, :, i] = data_test[:, :, i] / float(m)
 
-    train_size = int(data_len * split_ratio)
-    train_data = data[:train_size]
-    test_data = data[train_size:]
-    train_y = y[:train_size]
-    test_y = y[train_size:]
     train_X, train_Y, test_X, test_Y = list(), list(), list(), list()
-    for i in range(train_size):
-        train_X.append(np.array(train_data[i, :5, :]))
-        train_Y.append(np.array(train_y[i, -1]))
-    for i in range(data_len-train_size):
-        test_X.append(np.array(test_data[i, :5, :]))
-        test_Y.append(np.array(test_y[i, -1]))
+    for i in range(train_data_len):
+        train_X.append(np.array(data[i, :5, :]))
+        train_Y.append(np.array(y[i, -1]))
+    for i in range(test_data_len):
+        test_X.append(np.array(data_test[i, :5, :]))
+        test_Y.append(np.array(y_test[i, -1]))
     return np.array(train_X), np.array(train_Y), np.array(test_X), np.array(test_Y)
 
 def generate_torch_datasets(
@@ -183,11 +183,13 @@ def generate_torch_datasets(
     return train_dataset, test_dataset
 
 def generate_torch_datasets_T2T(
-    data, y, split_ratio=0.8, normalize=True
+    data, y, data_test, y_test, split_ratio=0.8, normalize=True
 ):
     train_X, train_Y, test_X, test_Y = generate_dataset_T2T(
         data,
         y, 
+        data_test, 
+        y_test, 
         split_ratio=split_ratio,
         normalize=normalize,
     )

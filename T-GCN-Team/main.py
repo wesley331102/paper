@@ -51,8 +51,8 @@ def get_callbacks(args):
 
 def main_supervised(args):
     if args.model_name == "T2TGRU":
-        feat_path = os.path.join('data', 'T2T', 'x_feat.p')
-        y_path = os.path.join('data', 'T2T', 'y_feat_odds.p')
+        feat_path = os.path.join('data', 'T2T', 'x_feat_train.p')
+        y_path = os.path.join('data', 'T2T', 'y_feat_odds_train.p')
         T2T_flag = True
     else:
         feat_path = os.path.join('data', '21_22', 'new_team_list_other_n.p')
@@ -65,6 +65,8 @@ def main_supervised(args):
         player_team_path=os.path.join('data', '21_22', 'player_to_team_dict.p'),
         y_path=y_path,
         T2T=T2T_flag,
+        feat_path_test = os.path.join('data', 'T2T', 'x_feat.p'),
+        y_path_test = os.path.join('data', 'T2T', 'y_feat_odds.p'),
         adj_path=os.path.join('data', '21_22', 'team_adj.csv'), 
         adj_1_path=os.path.join('data', '21_22', 'pass_adj.csv'),
         adj_2_path=os.path.join('data', '21_22', 'ast_adj.csv'),
