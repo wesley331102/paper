@@ -125,9 +125,14 @@ def generate_dataset(
             data[:, :, i] = data[:, :, i] / float(m)
 
     train_size = int(data_len * split_ratio)
-    print('===', data_len)
-    train_data = data[:train_size]
-    test_data = data[train_size:data_len]
+    # for dynamic graph
+    dynamic_data = list()
+    for i in range(data_len):
+        dynamic_data.append(np.concatenate((data[i], np.array([i for _ in range(23)]).reshape((1, 23))), axis=0))
+    train_data = dynamic_data[:train_size]
+    test_data = dynamic_data[train_size:data_len]
+    # train_data = data[:train_size]
+    # test_data = data[train_size:data_len]
     y = dict_to_list_name(y, output_attention)
     train_y = y[:train_size]
     test_y = y[train_size:data_len]
@@ -140,6 +145,7 @@ def generate_dataset(
     for i in range(len(test_data) - seq_len - pre_len):
         test_X.append(np.array(test_data[i : i + seq_len]))
         test_Y.append(np.array(test_y[i + seq_len : i + seq_len + pre_len]))
+    print(np.array(train_X).shape)
     return np.array(train_X), train_Y, np.array(test_X), test_Y
 
 def generate_dataset_T2T(
