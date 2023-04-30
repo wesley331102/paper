@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from utils.graph_conv import calculate_laplacian_with_self_loop
-from utils.dict_processing import dict_processing
 import numpy as np
+from itertools import combinations
 
 class GraphConvolutionLayer(nn.Module):
     def __init__(self, adj: np.ndarray, feature_dim: int, input_dim: int, output_dim: int, bias: float = 0.0):
@@ -128,7 +128,7 @@ class RelationalGraphConvLayer(nn.Module):
         nn.init.xavier_uniform_(self.w_rel)
         nn.init.constant_(self.biases, self._bias_init_value)
 
-    def forward(self, inputs, hidden_state):
+    def forward(self, inputs, hidden_state, team_graph_list, oppo_graph_list):
         batch_dim, num_nodes, feature_dim = inputs.shape
         # batch size * num of player nodes * feature dimension
         inputs = inputs.reshape((batch_dim, num_nodes, feature_dim))
@@ -136,26 +136,33 @@ class RelationalGraphConvLayer(nn.Module):
         hidden_state = hidden_state.reshape(
             (batch_dim, num_nodes, self._input_dim)
         )
+        # batch size * num of player nodes * num of player nodes
+        dynamic_laplacian_1 = self.laplacian_1.reshape((1, num_nodes, num_nodes)).repeat(batch_dim, 1, 1) * torch.stack(team_graph_list)
+        # batch size * num of player nodes * num of player nodes
+        dynamic_laplacian_2 = self.laplacian_2.reshape((1, num_nodes, num_nodes)).repeat(batch_dim, 1, 1) * torch.stack(team_graph_list)
+        # batch size * num of player nodes * num of player nodes
+        dynamic_laplacian_3 = self.laplacian_3.reshape((1, num_nodes, num_nodes)).repeat(batch_dim, 1, 1) * torch.stack(oppo_graph_list)
+        # batch size * num of player nodes * num of player nodes
+        dynamic_laplacian_4 = self.laplacian_4.reshape((1, num_nodes, num_nodes)).repeat(batch_dim, 1, 1) * torch.stack(oppo_graph_list)
+        # batch size * num of player nodes * num of player nodes
+        dynamic_laplacian_5 = self.laplacian_5.reshape((1, num_nodes, num_nodes)).repeat(batch_dim, 1, 1) * torch.stack(oppo_graph_list)
+
         # [x, h] (batch size * num of player nodes * (feature dimension + input dimension))
         a_times_concat = torch.cat((inputs, hidden_state), dim=2)
-        # [x, h] (num of player nodes * (feature dimension + input dimension) * batch size)
-        a_times_concat = a_times_concat.transpose(0, 1).transpose(1, 2)
-        # [x, h] (num of player nodes * ((feature dimension + input dimension) * batch size))
-        a_times_concat = a_times_concat.reshape(
-            (num_nodes, (self._feature_dim + self._input_dim) * batch_dim)
-        )
+        
         supports = []
         # A[x, h] (num of player nodes * ((feature dimension + input dimension) * batch size))
         # tunable
-        supports.append(self.laplacian_1 @ a_times_concat)
-        # num of relationships * A[x, h] num of relationships * (num of player nodes * ((feature dimension + input dimension) * batch size))
-        supports.append(self.laplacian_2 @ a_times_concat)
-        # num of relationships * A[x, h] num of relationships * (num of player nodes * ((feature dimension + input dimension) * batch size))
-        supports.append(self.laplacian_3 @ a_times_concat)
-        # num of relationships * A[x, h] num of relationships * (num of player nodes * ((feature dimension + input dimension) * batch size))
-        supports.append(self.laplacian_4 @ a_times_concat)
-        # num of relationships * A[x, h] num of relationships * (num of player nodes * ((feature dimension + input dimension) * batch size))
-        supports.append(self.laplacian_5 @ a_times_concat)
+        # num of relationships * A[x, h] num of player nodes * ((feature dimension + input dimension) * batch size)
+        supports.append((dynamic_laplacian_1 @ a_times_concat).transpose(0, 1).transpose(1, 2))
+        # num of relationships * A[x, h] num of player nodes * ((feature dimension + input dimension) * batch size)
+        supports.append((dynamic_laplacian_2 @ a_times_concat).transpose(0, 1).transpose(1, 2))
+        # num of relationships * A[x, h] num of player nodes * ((feature dimension + input dimension) * batch size)
+        supports.append((dynamic_laplacian_3 @ a_times_concat).transpose(0, 1).transpose(1, 2))
+        # num of relationships * A[x, h] num of player nodes * ((feature dimension + input dimension) * batch size)
+        supports.append((dynamic_laplacian_4 @ a_times_concat).transpose(0, 1).transpose(1, 2))
+        # num of relationships * A[x, h] num of player nodes * ((feature dimension + input dimension) * batch size)
+        supports.append((dynamic_laplacian_5 @ a_times_concat).transpose(0, 1).transpose(1, 2))
         # A[x, h] (num of player nodes * (num of relationships * (feature dimension + input dimension) * batch size))
         a_times_concat = torch.cat(supports, dim=1)
         # A[x, h] (num of player nodes * (num of relationships * (feature dimension + input dimension)) * batch size)
@@ -274,7 +281,10 @@ class BGCNCell(nn.Module):
             self.register_buffer("adj_5", torch.FloatTensor(adj_5))
         # team to player dictionary
         if self._applying_player:
-            self._team_2_player = dict_processing(team_2_player, self._input_dim_t, self._input_dim_p)
+            self._team_2_player = team_2_player
+            # dynamic graph dict
+            self._team_graph_dict = self.mask_graph()
+
         # GCN 1
         self.graph_conv1 = GraphConvolutionLayer(
             self.adj, self._feature_dim, self._hidden_dim, self._hidden_dim*2, bias=1.0
@@ -296,8 +306,37 @@ class BGCNCell(nn.Module):
             self.co_attention = ParallelCoAttentionLayer(
                 self._hidden_dim, self._aspect_num, self._co_attention_dim
             )
+    
+    def mask_graph(self):
+        team_graph_dict = dict()
+        for i in self._team_2_player.keys():
+            team_dict = dict()
+            for team in self._team_2_player[i]:
+                team_combination = list(combinations(self._team_2_player[i][team], 2))
+                team_dict[team] = team_combination
+            team_graph_dict[i] = team_dict
+        return team_graph_dict
+    
+    def get_dynamic_graph(self, seq_index):
+        seq_list = [s.item() for s in seq_index]
+        team_graph_list = list()
+        oppo_graph_list = list()
+        for batch in seq_list:
+            team_dict = dict()
+            team_graph = torch.zeros(self._input_dim_p, self._input_dim_p)
+            oppo_graph = torch.ones(self._input_dim_p, self._input_dim_p)
+            for team in self._team_2_player[batch]:
+                team_combination = self._team_graph_dict[batch][team]
+                team_dict[team] = team_combination
+                for com in team_combination:
+                    team_graph[com[0]][com[1]] = 1
+                    team_graph[com[1]][com[0]] = 1
+            oppo_graph = oppo_graph - team_graph
+            team_graph_list.append(team_graph)
+            oppo_graph_list.append(oppo_graph)
+        return team_graph_list, oppo_graph_list
 
-    def forward(self, inputs, hidden_state):
+    def forward(self, inputs, hidden_state, seq_index):
         if self._applying_player:
             # batch size * num of team nodes * feature dimension
             team_inputs = inputs[:, :self._input_dim_t, :]
@@ -328,21 +367,20 @@ class BGCNCell(nn.Module):
         new_hidden_state_t = u_t * team_hidden_state + (1.0 - u_t) * c_t
 
         if self._applying_player:
+            team_graph_list, oppo_graph_list = self.get_dynamic_graph(seq_index)
             # rgcn
             # [r, u] = sigmoid(A[x, h]W + b)
             # batch size * (num of player nodes * (2 * hidden state dimension))
-            concatenation_p = torch.sigmoid(self.r_graph_conv1(player_inputs, player_hidden_state))
+            concatenation_p = torch.sigmoid(self.r_graph_conv1(player_inputs, player_hidden_state, team_graph_list, oppo_graph_list))
             # r (batch size * (num of player nodes * hidden state dimension))
             # u (batch size * (num of player nodes * hidden state dimension))
             r_p, u_p = torch.chunk(concatenation_p, chunks=2, dim=1)
             # c = tanh(A[x, (r * h)W + b])
             # c (batch size * (num of player nodes * hidden state dimension))
-            c_p = torch.tanh(self.r_graph_conv2(player_inputs, r_p * player_hidden_state))
+            c_p = torch.tanh(self.r_graph_conv2(player_inputs, r_p * player_hidden_state, team_graph_list, oppo_graph_list))
             # h := u * h + (1 - u) * c
             # h (batch size, (num of player nodes * hidden state dimension))
             new_hidden_state_p = u_p * player_hidden_state + (1.0 - u_p) * c_p
-        
-        if self._applying_player:
             # batch size * (num of team nodes * hidden state dimension)
             batch_dim_t, team_nodes_hidden_dim = new_hidden_state_t.shape
             # batch size * (num of player nodes * hidden state dimension)
@@ -656,7 +694,6 @@ class BGCN(nn.Module):
         self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self.adj_3, self.adj_4, self.adj_5, self._team_2_player, self._input_dim_t, self._input_dim_p, self._aspect_num, self._feature_dim, self._hidden_dim, self._co_attention_dim, self._applying_player)
         if self._applying_attention:
             self.attention = AttentionLayer(self._hidden_dim)
-            self.inputAttention = InputAttentionLayer(self._hidden_dim)
 
     def mask_aspect(self, feature_dim, weight, feature_index):
         # aspect feature dim * aspect dim
@@ -670,8 +707,14 @@ class BGCN(nn.Module):
         return mask_vector
 
     def forward(self, inputs):
+        # batch size * seq length * num of nodes + 1 * feature dimension
+        batch_dim, seq_dim, input_dim_with_mem, feature_dim = inputs.shape
+        # num of nodes
+        input_dim = input_dim_with_mem - 1
+        # batch size * seq length
+        seq_index = inputs[:, :, -1, 0]
         # batch size * seq length * num of nodes * feature dimension
-        batch_dim, seq_dim, input_dim, feature_dim = inputs.shape
+        inputs = inputs[:, :, :-1, :]
         # num of nodes = num of team nodes + num of player nodes
         assert input_dim == self._input_dim_t + self._input_dim_p
         # batch size * (num of nodes * hidden state dimension)
@@ -706,11 +749,12 @@ class BGCN(nn.Module):
             # seq size * batch size * (num of nodes * hidden dimension)
             attention_output = torch.zeros(seq_dim, batch_dim, new_input_dim*self._hidden_dim)
         for i in range(seq_dim):
-            if i == seq_dim - 1:
-                attention_input = self.inputAttention(new_inputs[:, :, :new_input_dim, :], hidden_state)
-                output, hidden_state = self.tgcn_cell(attention_input, hidden_state)
-            else:
-                output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state)
+            # if i == seq_dim - 1:
+            #     attention_input = self.inputAttention(new_inputs[:, :, :new_input_dim, :], hidden_state)
+            #     output, hidden_state = self.tgcn_cell(attention_input, hidden_state)
+            # else:
+            #     output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state)
+            output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state, seq_index[:, i])
 
             if self._applying_attention:
                 attention_output[i] = output[:, :]

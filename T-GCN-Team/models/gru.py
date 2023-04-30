@@ -123,8 +123,12 @@ class GRU(nn.Module):
         return mask_vector
 
     def forward(self, inputs):
+        # batch size * seq length * num of nodes + 1 * feature dimension
+        batch_dim, seq_dim, input_dim_with_mem, feature_dim = inputs.shape
+        # num of nodes
+        input_dim = input_dim_with_mem - 1
         # batch size * seq length * num of nodes * feature dimension
-        batch_dim, seq_dim, input_dim, feature_dim = inputs.shape
+        inputs = inputs[:, :, :-1, :]
         # batch_size, seq_len, num_nodes = inputs.shape
         assert input_dim == self._input_dim
         # batch size * (num of nodes * hidden state dimension)

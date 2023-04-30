@@ -18,6 +18,11 @@ def load_T2T_features(feat_path):
     
 def load_team_player_dict(path):
     res = pickle.load(open(path, "rb"))
+    for day in res.keys():
+        day_dict = res[day]
+        for t in day_dict.keys():
+            if day_dict[t] is None:
+                res[day][t] = []
     return res
 
 def load_targets(target_path):
@@ -137,7 +142,7 @@ def generate_dataset(
     train_y = y[:train_size]
     test_y = y[train_size:data_len]
     train_X, train_Y, test_X, test_Y = list(), list(), list(), list()
-    seq_len = 10
+    seq_len = 5
     pre_len = 1
     for i in range(len(train_data) - seq_len - pre_len):
         train_X.append(np.array(train_data[i : i + seq_len]))
@@ -145,7 +150,6 @@ def generate_dataset(
     for i in range(len(test_data) - seq_len - pre_len):
         test_X.append(np.array(test_data[i : i + seq_len]))
         test_Y.append(np.array(test_y[i + seq_len : i + seq_len + pre_len]))
-    print(np.array(train_X).shape)
     return np.array(train_X), train_Y, np.array(test_X), test_Y
 
 def generate_dataset_T2T(

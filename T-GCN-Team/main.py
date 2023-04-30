@@ -35,7 +35,7 @@ def get_attentionLayer(args):
 
 def get_task(args, model, attentionLayer, dm):
     task = getattr(tasks, args.settings.capitalize() + "ForecastTask")(
-        model=model, attentionLayer=attentionLayer, team_2_player=dm.player_2_team, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
+        model=model, attentionLayer=attentionLayer, t_dim=dm.adj.shape[0] , p_dim=dm.adj_1.shape[0], **vars(args)
     )
     return task
 
@@ -62,7 +62,7 @@ def main_supervised(args):
     dm = utils.data.SpatioTemporalCSVDataModule(
         feat_path=feat_path, 
         p_feat_path=os.path.join('data', '21_22', 'new_player_list_other_n.p'),
-        player_team_path=os.path.join('data', '21_22', 'player_to_team_dict.p'),
+        player_team_path=os.path.join('data', '21_22', 'member_schedule.p'),
         y_path=y_path,
         T2T=T2T_flag,
         feat_path_test = os.path.join('data', 'T2T', 'x_feat.p'),

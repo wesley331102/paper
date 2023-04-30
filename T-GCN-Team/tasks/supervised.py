@@ -3,10 +3,8 @@ import torch.optim
 import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
-import torchmetrics
 import utils.metrics
 import utils.losses
-from utils.dict_processing import dict_processing_loss
 import torch
 
 class SupervisedForecastTask(pl.LightningModule):
@@ -16,7 +14,6 @@ class SupervisedForecastTask(pl.LightningModule):
         attentionLayer: nn.Module,
         loss: str="nba_mae",
         applying_player: bool = False,
-        team_2_player: dict = {},
         t_dim: int = 0,
         p_dim: int = 0,
         output_attention: str = "None",
@@ -32,7 +29,6 @@ class SupervisedForecastTask(pl.LightningModule):
         self.applying_player = applying_player
         self.output_attention = output_attention
         self._loss = loss
-        self.team_2_player = dict_processing_loss(team_2_player, t_dim, p_dim)
 
         if self.output_attention in ["None", "self", "V1", "V2", "V2_reverse", "co"]:
             self.lt1 = nn.Linear(5, 16)
@@ -96,9 +92,6 @@ class SupervisedForecastTask(pl.LightningModule):
             mask_vector[i] = aspect_weight[weight_index]
             weight_index += 1
         return mask_vector
-    
-    def MLP(self, MLP_input):
-        return MLP_input
 
     def forward(self, x):
         # (batch_size, num_nodes, hidden_dim)
