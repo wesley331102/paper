@@ -221,37 +221,37 @@ class ParallelCoAttentionLayer(nn.Module):
         nn.init.xavier_uniform_(self.w_hp)
     
     def forward(self, team_hidden_state, player_hidden_state):
-        team_batch_dim, team_hidden_dim  = team_hidden_state.shape
-        player_batch_dim, player_num_nodes, player_hidden_dim = player_hidden_state.shape
-        assert team_batch_dim == player_batch_dim and team_hidden_dim == player_hidden_dim
-        # batch size * num of players * (number of aspect * aspect dimension)
-        team_hidden_state_t = team_hidden_state.reshape((team_batch_dim, 1, team_hidden_dim)).repeat(1, player_num_nodes, 1)
-        # batch size * num of players * (number of aspect * aspect dimension)
-        player_hidden_state_p = player_hidden_state.reshape(player_batch_dim, player_num_nodes, player_hidden_dim)
-        # batch size * num of players * aspect dimension * number of aspect
-        team_hidden_state_t = team_hidden_state_t.reshape((team_batch_dim, player_num_nodes, self._num_of_aspect, self._aspect_dim)).permute(0, 1, 3, 2)
-        # batch size * num of players * number of aspect * aspect dimension
-        player_hidden_state_p = player_hidden_state_p.reshape(player_batch_dim, player_num_nodes, self._num_of_aspect, self._aspect_dim)
-        # batch size * num of players * num of aspect * num of aspect
+        team_hidden_dim  = team_hidden_state.shape[0]
+        player_num_nodes, player_hidden_dim = player_hidden_state.shape
+        assert team_hidden_dim == player_hidden_dim
+        # num of players * (number of aspect * aspect dimension)
+        team_hidden_state_t = team_hidden_state.reshape((1, team_hidden_dim)).repeat(player_num_nodes, 1)
+        # num of players * (number of aspect * aspect dimension)
+        player_hidden_state_p = player_hidden_state.reshape(player_num_nodes, player_hidden_dim)
+        # num of players * aspect dimension * number of aspect
+        team_hidden_state_t = team_hidden_state_t.reshape((player_num_nodes, self._num_of_aspect, self._aspect_dim)).permute(0, 2, 1)
+        # num of players * number of aspect * aspect dimension
+        player_hidden_state_p = player_hidden_state_p.reshape(player_num_nodes, self._num_of_aspect, self._aspect_dim)
+        # num of players * num of aspect * num of aspect
         C = torch.tanh(torch.matmul(player_hidden_state_p, torch.matmul(self.w_b, team_hidden_state_t)))
-        # batch size * num of players * co-attention dimension * num of aspect
-        team_co_attention_hidden_state = torch.tanh(torch.matmul(self.w_t, team_hidden_state_t) + torch.matmul(torch.matmul(self.w_p, player_hidden_state_p.permute(0, 1, 3, 2)), C))
-        # batch size * num of players * co-attention dimension * num of aspect
-        player_co_attention_hidden_state = torch.tanh(torch.matmul(self.w_p, player_hidden_state_p.permute(0, 1, 3, 2)) + torch.matmul(torch.matmul(self.w_t, team_hidden_state_t), C.permute(0, 1, 3, 2)))
-        # batch size * num of players * num of aspect * num of aspect
-        team_attention = F.softmax(torch.matmul(torch.t(self.w_ht), team_co_attention_hidden_state), dim=3)
-        # batch size * num of players * num of aspect * num of aspect
-        player_attention = F.softmax(torch.matmul(torch.t(self.w_hp), player_co_attention_hidden_state), dim=3)
-        # batch size * num of players * number of aspect * aspect dimension
-        team_hidden_state_output = torch.squeeze(torch.matmul(team_attention, team_hidden_state_t.permute(0, 1, 3, 2)))        
-        # batch size * num of players * number of aspect * aspect dimension
+        # num of players * co-attention dimension * num of aspect
+        team_co_attention_hidden_state = torch.tanh(torch.matmul(self.w_t, team_hidden_state_t) + torch.matmul(torch.matmul(self.w_p, player_hidden_state_p.permute(0, 2, 1)), C))
+        # num of players * co-attention dimension * num of aspect
+        player_co_attention_hidden_state = torch.tanh(torch.matmul(self.w_p, player_hidden_state_p.permute(0, 2, 1)) + torch.matmul(torch.matmul(self.w_t, team_hidden_state_t), C.permute(0, 2, 1)))
+        # num of players * num of aspect * num of aspect
+        team_attention = F.softmax(torch.matmul(torch.t(self.w_ht), team_co_attention_hidden_state), dim=2)
+        # num of players * num of aspect * num of aspect
+        player_attention = F.softmax(torch.matmul(torch.t(self.w_hp), player_co_attention_hidden_state), dim=2)
+        # num of players * number of aspect * aspect dimension
+        team_hidden_state_output = torch.squeeze(torch.matmul(team_attention, team_hidden_state_t.permute(0, 2, 1)))        
+        # num of players * number of aspect * aspect dimension
         player_hidden_state_output = torch.squeeze(torch.matmul(player_attention, player_hidden_state_p)) 
-        # batch size * num of players * (number of aspect * aspect dimension)
-        team_hidden_state_output = team_hidden_state_output.reshape((team_batch_dim, player_num_nodes, team_hidden_dim))       
-        # batch size * num of players * (number of aspect * aspect dimension)
-        player_hidden_state_output = player_hidden_state_output.reshape((player_batch_dim, player_num_nodes, player_hidden_dim))
+        # num of players * (number of aspect * aspect dimension)
+        team_hidden_state_output = team_hidden_state_output.reshape((player_num_nodes, team_hidden_dim))       
+        # num of players * (number of aspect * aspect dimension)
+        player_hidden_state_output = player_hidden_state_output.reshape((player_num_nodes, player_hidden_dim))
 
-        return torch.mean(team_hidden_state_output, dim=1), player_hidden_state_output
+        return torch.mean(team_hidden_state_output, dim=0), player_hidden_state_output
 
 class BGCNCell(nn.Module):
     def __init__(self, adj: np.ndarray, adj_1: np.ndarray, adj_2: np.ndarray, adj_3: np.ndarray, adj_4: np.ndarray, adj_5: np.ndarray, team_2_player: dict, input_dim_t: int, input_dim_p: int, aspect_num: int, feature_dim: int, hidden_dim: int, co_attention_dim: int, applying_player: bool):
@@ -317,8 +317,7 @@ class BGCNCell(nn.Module):
             team_graph_dict[i] = team_dict
         return team_graph_dict
     
-    def get_dynamic_graph(self, seq_index):
-        seq_list = [s.item() for s in seq_index]
+    def get_dynamic_graph(self, seq_list):
         team_graph_list = list()
         oppo_graph_list = list()
         for batch in seq_list:
@@ -337,6 +336,7 @@ class BGCNCell(nn.Module):
         return team_graph_list, oppo_graph_list
 
     def forward(self, inputs, hidden_state, seq_index):
+        seq_list = [s.item() for s in seq_index]
         if self._applying_player:
             # batch size * num of team nodes * feature dimension
             team_inputs = inputs[:, :self._input_dim_t, :]
@@ -367,7 +367,7 @@ class BGCNCell(nn.Module):
         new_hidden_state_t = u_t * team_hidden_state + (1.0 - u_t) * c_t
 
         if self._applying_player:
-            team_graph_list, oppo_graph_list = self.get_dynamic_graph(seq_index)
+            team_graph_list, oppo_graph_list = self.get_dynamic_graph(seq_list)
             # rgcn
             # [r, u] = sigmoid(A[x, h]W + b)
             # batch size * (num of player nodes * (2 * hidden state dimension))
@@ -385,14 +385,16 @@ class BGCNCell(nn.Module):
             batch_dim_t, team_nodes_hidden_dim = new_hidden_state_t.shape
             # batch size * (num of player nodes * hidden state dimension)
             batch_dim_p, player_nodes_hidden_dim = new_hidden_state_p.shape
-            assert batch_dim_t == batch_dim_p
+            assert batch_dim_t == batch_dim_p and batch_dim_t == len(seq_list)
             # batch size * num of team nodes * hidden state dimension
             co_attention_hidden_state_t = new_hidden_state_t.reshape((batch_dim_t, self._input_dim_t, self._hidden_dim))
             # batch size * num of player nodes * hidden state dimension
             co_attention_hidden_state_p = new_hidden_state_p.reshape((batch_dim_p, self._input_dim_p, self._hidden_dim))
             # batch size * num of team nodes * hidden state dimension
-            for team in self._team_2_player:
-                co_attention_hidden_state_t[:, team, :], co_attention_hidden_state_p[:, self._team_2_player[team], :] = self.co_attention(co_attention_hidden_state_t[:, team, :], co_attention_hidden_state_p[:, self._team_2_player[team], :])
+            for i in range(batch_dim_t):
+                team_list = self._team_2_player[seq_list[i]].keys()
+                for team in team_list:
+                    co_attention_hidden_state_t[i, team, :], co_attention_hidden_state_p[i, self._team_2_player[seq_list[i]][team], :] = self.co_attention(co_attention_hidden_state_t[i, team, :], co_attention_hidden_state_p[i, self._team_2_player[seq_list[i]][team], :])
             # batch size * (num of nodes * hidden state dimension)
             new_hidden_state = torch.cat((co_attention_hidden_state_t, co_attention_hidden_state_p), 1).reshape(batch_dim_t, (team_nodes_hidden_dim + player_nodes_hidden_dim))
         else:

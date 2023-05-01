@@ -142,7 +142,7 @@ def generate_dataset(
     train_y = y[:train_size]
     test_y = y[train_size:data_len]
     train_X, train_Y, test_X, test_Y = list(), list(), list(), list()
-    seq_len = 5
+    seq_len = 10
     pre_len = 1
     for i in range(len(train_data) - seq_len - pre_len):
         train_X.append(np.array(train_data[i : i + seq_len]))
