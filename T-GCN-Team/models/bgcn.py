@@ -437,47 +437,6 @@ class AttentionLayer(nn.Module):
         aggr_inputs = torch.sum(scored_inputs, dim=2)
         return aggr_inputs
 
-class InputAttentionLayer(nn.Module):
-    def __init__(self, hidden_dim: int, **kwargs):
-        super(InputAttentionLayer, self).__init__(**kwargs)
-        # hidden dimension
-        self._hidden_dim = hidden_dim
-        # weight (hidden dimension)
-        self.w1 = nn.Parameter(torch.FloatTensor(self._hidden_dim, 1))
-        # weight (hidden dimension * hidden dimension)
-        self.w2 = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
-        # weight (hidden dimension * hidden dimension)
-        self.w3 = nn.Parameter(torch.FloatTensor(self._hidden_dim, self._hidden_dim))
-        # initialize parameters
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        nn.init.xavier_uniform_(self.w1)
-        nn.init.xavier_uniform_(self.w2)
-        nn.init.xavier_uniform_(self.w3)
-        
-    def forward(self, inputs, hidden_state):
-        # batch size * num of nodes * seq length * hidden dimension
-        inputs = inputs.permute(0, 2, 1, 3)
-        # batch size * num of nodes * seq length * hidden dimension
-        batch_dim, input_dim, seq_dim, hidden_dim = inputs.shape
-        # batch size * (num of nodes * hidden dimension)
-        batch_dim_h, all_hidden_dim = hidden_state.shape
-        assert batch_dim == batch_dim_h and input_dim * hidden_dim == all_hidden_dim
-        # batch size * num of nodes * seq length * hidden dimension
-        hidden_state = hidden_state.reshape(batch_dim, input_dim, hidden_dim).repeat(1, seq_dim, 1).reshape(batch_dim, input_dim, seq_dim, hidden_dim)
-        # batch size * num of nodes * seq length * hidden dimension
-        u = torch.tanh(torch.matmul(inputs, self.w2) + torch.matmul(hidden_state, self.w3))
-        # batch size * num of nodes * seq length * 1
-        attn = torch.matmul(u, self.w1)
-        # batch size * num of nodes * seq length * 1
-        attn_score = F.softmax(attn, dim=2)
-        # batch size * num of nodes * seq length * hidden dimension
-        scored_inputs = inputs * attn_score
-        # batch size * num of nodes * hidden dimension
-        aggr_inputs = torch.sum(scored_inputs, dim=2)
-        return aggr_inputs
-    
 class SelfAttentionLayer(nn.Module):
     def __init__(self, hidden_dim: int, **kwargs):
         super(SelfAttentionLayer, self).__init__(**kwargs)

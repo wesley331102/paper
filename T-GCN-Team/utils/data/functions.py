@@ -134,22 +134,19 @@ def generate_dataset(
     dynamic_data = list()
     for i in range(data_len):
         dynamic_data.append(np.concatenate((data[i], np.array([i for _ in range(23)]).reshape((1, 23))), axis=0))
-    train_data = dynamic_data[:train_size]
-    test_data = dynamic_data[train_size:data_len]
-    # train_data = data[:train_size]
-    # test_data = data[train_size:data_len]
     y = dict_to_list_name(y, output_attention)
-    train_y = y[:train_size]
-    test_y = y[train_size:data_len]
     train_X, train_Y, test_X, test_Y = list(), list(), list(), list()
     seq_len = 10
     pre_len = 1
-    for i in range(len(train_data) - seq_len - pre_len):
-        train_X.append(np.array(train_data[i : i + seq_len]))
-        train_Y.append(np.array(train_y[i + seq_len : i + seq_len + pre_len]))
-    for i in range(len(test_data) - seq_len - pre_len):
-        test_X.append(np.array(test_data[i : i + seq_len]))
-        test_Y.append(np.array(test_y[i + seq_len : i + seq_len + pre_len]))
+
+    for i in range(data_len - seq_len - pre_len):
+        if i + seq_len > train_size:
+            test_X.append(np.array(dynamic_data[i : i + seq_len]))
+            test_Y.append(np.array(y[i + seq_len : i + seq_len + pre_len]))
+        else:
+            train_X.append(np.array(dynamic_data[i : i + seq_len]))
+            train_Y.append(np.array(y[i + seq_len : i + seq_len + pre_len]))
+        
     return np.array(train_X), train_Y, np.array(test_X), test_Y
 
 def generate_dataset_T2T(

@@ -19,12 +19,12 @@ python main.py --model_name T2TGRU --max_epochs 200 --learning_rate 0.001 --weig
 
 ```bash
 # GRU no player
-python main.py --model_name GRU --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --applying_player --loss nba_mae --settings supervised
+python main.py --model_name GRU --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba_mae --settings supervised
 ```
 
 ```bash
 # GRU
-python main.py --model_name GRU --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba_mae --settings supervised
+python main.py --model_name GRU --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --applying_player --loss nba_mae --settings supervised
 ```
 
 ```bash
