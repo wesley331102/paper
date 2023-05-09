@@ -197,7 +197,7 @@ class ParallelCoAttentionLayer(nn.Module):
         # num of aspect
         self._num_of_aspect = num_of_aspect
         # aspect dimension
-        self._aspect_dim = hidden_dim // num_of_aspect
+        self._aspect_dim = (hidden_dim // num_of_aspect) * 2
         # co-attention dimension
         self._co_attention_dim = co_attention_dim
         # weight (aspect dimension * aspect dimension)
@@ -336,8 +336,8 @@ class BGCNCell(nn.Module):
         return team_graph_list, oppo_graph_list
 
     def forward(self, inputs, hidden_state, seq_index):
-        seq_list = [s.item() for s in seq_index]
         if self._applying_player:
+            seq_list = [s.item() for s in seq_index]
             # batch size * num of team nodes * feature dimension
             team_inputs = inputs[:, :self._input_dim_t, :]
             # batch size * num of player nodes * feature dimension
@@ -346,32 +346,49 @@ class BGCNCell(nn.Module):
             team_hidden_state = hidden_state[:, :self._input_dim_t*self._hidden_dim]
             # batch size * (num of player nodes * hidden state dimension)
             player_hidden_state = hidden_state[:, self._input_dim_t*self._hidden_dim:]
-        else:
-            # batch size * num of team nodes * feature dimension
-            team_inputs = inputs
-            # batch size * (num of team nodes * hidden state dimension)
-            team_hidden_state = hidden_state
-
-        # gcn
-        # [r, u] = sigmoid(A[x, h]W + b)
-        # batch size * (num of team nodes * (2 * hidden state dimension))
-        concatenation_t = torch.sigmoid(self.graph_conv1(team_inputs, team_hidden_state))
-        # r (batch size * (num of team nodes * hidden state dimension))
-        # u (batch size * (num of team nodes * hidden state dimension))
-        r_t, u_t = torch.chunk(concatenation_t, chunks=2, dim=1)
-        # c = tanh(A[x, (r * h)W + b])
-        # c (batch size * (num of team nodes * hidden state dimension))
-        c_t = torch.tanh(self.graph_conv2(team_inputs, r_t * team_hidden_state))
-        # h := u * h + (1 - u) * c
-        # h (batch size, (num of team nodes * hidden state dimension))
-        new_hidden_state_t = u_t * team_hidden_state + (1.0 - u_t) * c_t
-
-        if self._applying_player:
+            # gcn
+            concatenation_t = self.graph_conv1(team_inputs, team_hidden_state)
+            # rgcn
             team_graph_list, oppo_graph_list = self.get_dynamic_graph(seq_list)
+            concatenation_p = self.r_graph_conv1(player_inputs, player_hidden_state, team_graph_list, oppo_graph_list)
+
+            # co-attention
+            # batch size * (num of team nodes * (2 * hidden state dimension))
+            batch_dim_t, _ = concatenation_t.shape
+            # batch size * (num of player nodes * h(2 * hidden state dimension))
+            batch_dim_p, _ = concatenation_p.shape
+            assert batch_dim_t == batch_dim_p and batch_dim_t == len(seq_list)
+            # batch size * num of team nodes * (2 * hidden state dimension)
+            co_attention_hidden_state_t = concatenation_t.reshape((batch_dim_t, self._input_dim_t, 2 * self._hidden_dim))
+            # batch size * num of player nodes * (2 * hidden state dimension)
+            co_attention_hidden_state_p = concatenation_p.reshape((batch_dim_p, self._input_dim_p, 2 * self._hidden_dim))
+            for i in range(batch_dim_t):
+                team_list = self._team_2_player[seq_list[i]].keys()
+                for team in team_list:
+                    co_attention_hidden_state_t[i, team, :], co_attention_hidden_state_p[i, self._team_2_player[seq_list[i]][team], :] = self.co_attention(co_attention_hidden_state_t[i, team, :], co_attention_hidden_state_p[i, self._team_2_player[seq_list[i]][team], :])            
+            # batch size * num of team nodes * (2 * hidden state dimension)
+            co_attention_hidden_state_t = co_attention_hidden_state_t.reshape((batch_dim_p, self._input_dim_t * 2 * self._hidden_dim))
+            # batch size * num of player nodes * (2 * hidden state dimension)
+            co_attention_hidden_state_p = co_attention_hidden_state_p.reshape((batch_dim_p, self._input_dim_p * 2 * self._hidden_dim))
+
+            # gcn
+            # [r, u] = sigmoid(A[x, h]W + b)
+            # batch size * (num of team nodes * (2 * hidden state dimension))
+            concatenation_t = torch.sigmoid(co_attention_hidden_state_t)
+            # r (batch size * (num of team nodes * hidden state dimension))
+            # u (batch size * (num of team nodes * hidden state dimension))
+            r_t, u_t = torch.chunk(concatenation_t, chunks=2, dim=1)
+            # c = tanh(A[x, (r * h)W + b])
+            # c (batch size * (num of team nodes * hidden state dimension))
+            c_t = torch.tanh(self.graph_conv2(team_inputs, r_t * team_hidden_state))
+            # h := u * h + (1 - u) * c
+            # h (batch size, (num of team nodes * hidden state dimension))
+            new_hidden_state_t = u_t * team_hidden_state + (1.0 - u_t) * c_t
+
             # rgcn
             # [r, u] = sigmoid(A[x, h]W + b)
             # batch size * (num of player nodes * (2 * hidden state dimension))
-            concatenation_p = torch.sigmoid(self.r_graph_conv1(player_inputs, player_hidden_state, team_graph_list, oppo_graph_list))
+            concatenation_p = torch.sigmoid(co_attention_hidden_state_p)
             # r (batch size * (num of player nodes * hidden state dimension))
             # u (batch size * (num of player nodes * hidden state dimension))
             r_p, u_p = torch.chunk(concatenation_p, chunks=2, dim=1)
@@ -381,25 +398,26 @@ class BGCNCell(nn.Module):
             # h := u * h + (1 - u) * c
             # h (batch size, (num of player nodes * hidden state dimension))
             new_hidden_state_p = u_p * player_hidden_state + (1.0 - u_p) * c_p
-            # batch size * (num of team nodes * hidden state dimension)
-            batch_dim_t, team_nodes_hidden_dim = new_hidden_state_t.shape
-            # batch size * (num of player nodes * hidden state dimension)
-            batch_dim_p, player_nodes_hidden_dim = new_hidden_state_p.shape
-            assert batch_dim_t == batch_dim_p and batch_dim_t == len(seq_list)
-            # batch size * num of team nodes * hidden state dimension
-            co_attention_hidden_state_t = new_hidden_state_t.reshape((batch_dim_t, self._input_dim_t, self._hidden_dim))
-            # batch size * num of player nodes * hidden state dimension
-            co_attention_hidden_state_p = new_hidden_state_p.reshape((batch_dim_p, self._input_dim_p, self._hidden_dim))
-            # batch size * num of team nodes * hidden state dimension
-            for i in range(batch_dim_t):
-                team_list = self._team_2_player[seq_list[i]].keys()
-                for team in team_list:
-                    co_attention_hidden_state_t[i, team, :], co_attention_hidden_state_p[i, self._team_2_player[seq_list[i]][team], :] = self.co_attention(co_attention_hidden_state_t[i, team, :], co_attention_hidden_state_p[i, self._team_2_player[seq_list[i]][team], :])
             # batch size * (num of nodes * hidden state dimension)
-            new_hidden_state = torch.cat((co_attention_hidden_state_t, co_attention_hidden_state_p), 1).reshape(batch_dim_t, (team_nodes_hidden_dim + player_nodes_hidden_dim))
+            new_hidden_state = torch.cat((new_hidden_state_t, new_hidden_state_p), 1).reshape(batch_dim_t, ((self._input_dim_t + self._input_dim_p) * self._hidden_dim))
         else:
-            # batch size, (num of nodes * hidden state dimension)
-            new_hidden_state = new_hidden_state_t
+            # batch size * num of team nodes * feature dimension
+            team_inputs = inputs
+            # batch size * (num of team nodes * hidden state dimension)
+            team_hidden_state = hidden_state
+            # gcn
+            # [r, u] = sigmoid(A[x, h]W + b)
+            # batch size * (num of team nodes * (2 * hidden state dimension))
+            concatenation_t = torch.sigmoid(self.graph_conv1(team_inputs, team_hidden_state))
+            # r (batch size * (num of team nodes * hidden state dimension))
+            # u (batch size * (num of team nodes * hidden state dimension))
+            r_t, u_t = torch.chunk(concatenation_t, chunks=2, dim=1)
+            # c = tanh(A[x, (r * h)W + b])
+            # c (batch size * (num of team nodes * hidden state dimension))
+            c_t = torch.tanh(self.graph_conv2(team_inputs, r_t * team_hidden_state))
+            # h := u * h + (1 - u) * c
+            # h (batch size, (num of team nodes * hidden state dimension))
+            new_hidden_state = u_t * team_hidden_state + (1.0 - u_t) * c_t
         return new_hidden_state, new_hidden_state
 
     @property

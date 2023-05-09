@@ -49,7 +49,7 @@ python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight
 
 ```bash
 # BGCN attention V2 (add diff and mul)
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention V2 --loss nba_mae --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention V2 --loss nba_rmse --settings supervised 
 ```
 
 ```bash

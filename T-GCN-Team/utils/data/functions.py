@@ -136,7 +136,7 @@ def generate_dataset(
         dynamic_data.append(np.concatenate((data[i], np.array([i for _ in range(23)]).reshape((1, 23))), axis=0))
     y = dict_to_list_name(y, output_attention)
     train_X, train_Y, test_X, test_Y = list(), list(), list(), list()
-    seq_len = 10
+    seq_len = 5
     pre_len = 1
 
     for i in range(data_len - seq_len - pre_len):
