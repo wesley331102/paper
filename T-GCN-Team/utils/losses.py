@@ -73,9 +73,9 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                         com1 = torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean, team_1_ave_inputs), 0)
                         com2 = torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean, team_2_ave_inputs), 0)
                         com = torch.cat((com1, com2), 0)
-                        com = com.reshape((16, model.model.hyperparameters.get("hidden_dim")))
-                        com = model.transformer_encoder(com)
-                        com = torch.flatten(com)
+                        # com = com.reshape((16, model.model.hyperparameters.get("hidden_dim")))
+                        # com = model.transformer_encoder(com)
+                        # com = torch.flatten(com)
                 elif output_attention in ["V2_reverse", "co"]:
                     team_1_ave = t[j][33:113]
                     team_2_ave = t[j][113:193]

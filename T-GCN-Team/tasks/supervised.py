@@ -29,8 +29,8 @@ class SupervisedForecastTask(pl.LightningModule):
         self.applying_player = applying_player
         self.output_attention = output_attention
         self._loss = loss
-        encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
+        # encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
+        # self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
 
         if self.output_attention in ["None", "self", "V1", "V2", "V2_reverse", "co"]:
             self.lt1 = nn.Linear(5, 16)
