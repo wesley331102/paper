@@ -676,9 +676,7 @@ class BGCN(nn.Module):
         # BGCN cell
         self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self.adj_3, self.adj_4, self.adj_5, self._team_2_player, self._input_dim_t, self._input_dim_p, self._aspect_num, self._feature_dim, self._hidden_dim, self._co_attention_dim, self._applying_player)
         if self._applying_attention:
-            # self.attention = AttentionLayer(self._hidden_dim)
-            encoder_layer = nn.TransformerEncoderLayer(d_model=self._hidden_dim, nhead=8)
-            self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
+            self.attention = AttentionLayer(self._hidden_dim)
 
     def mask_aspect(self, feature_dim, weight, feature_index):
         # aspect feature dim * aspect dim
@@ -734,11 +732,6 @@ class BGCN(nn.Module):
             # seq size * batch size * (num of nodes * hidden dimension)
             attention_output = torch.zeros(seq_dim, batch_dim, new_input_dim*self._hidden_dim)
         for i in range(seq_dim):
-            # if i == seq_dim - 1:
-            #     attention_input = self.inputAttention(new_inputs[:, :, :new_input_dim, :], hidden_state)
-            #     output, hidden_state = self.tgcn_cell(attention_input, hidden_state)
-            # else:
-            #     output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state)
             output, hidden_state = self.tgcn_cell(new_inputs[:, i, :new_input_dim, :], hidden_state, seq_index[:, i])
 
             if self._applying_attention:
@@ -750,9 +743,9 @@ class BGCN(nn.Module):
         if self._applying_attention:
             # attention_output = attention_output.reshape((seq_dim, batch_dim, new_input_dim, self._hidden_dim))
             # output = self.attention(attention_output)
+
             attention_output = attention_output.reshape((seq_dim, batch_dim, new_input_dim, self._hidden_dim))
-            output = self.transformer_encoder(attention_output)
-            output = output.reshape((seq_dim, batch_dim, new_input_dim*self._hidden_dim))
+            return attention_output
         
         if self._applying_player:
             return output

@@ -13,6 +13,7 @@ class SupervisedForecastTask(pl.LightningModule):
         model: nn.Module,
         attentionLayer: nn.Module,
         loss: str="nba_mae",
+        applying_attention: bool = False,
         applying_player: bool = False,
         t_dim: int = 0,
         p_dim: int = 0,
@@ -29,6 +30,7 @@ class SupervisedForecastTask(pl.LightningModule):
         self.applying_player = applying_player
         self.output_attention = output_attention
         self._loss = loss
+        self.applying_attention = applying_attention
         # encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
         # self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
 
@@ -37,6 +39,10 @@ class SupervisedForecastTask(pl.LightningModule):
             self.lt2 = nn.Linear(3, 16)
             self.lt3 = nn.Linear(2, 16)
             self.lt4 = nn.Linear(1, 16)
+
+        if self.applying_attention:
+            encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim")*7, nhead=8)
+            self.seq_attention = nn.TransformerEncoder(encoder_layer, num_layers=1)
 
         if self.applying_player:
             if self.output_attention in ["self", "V1", "V2"]:
@@ -111,6 +117,8 @@ class SupervisedForecastTask(pl.LightningModule):
     def loss(self, inputs, targets):
         if self._loss == 'nba_T2T':
             return utils.losses.nba_loss_funtion_with_regularizer_loss_T2T(inputs, targets, self)  
+        if self.applying_attention:
+            return utils.losses.nba_loss_funtion_with_regularizer_loss_with_seq(inputs, targets, self, self._loss)
         if self.applying_player:
             return utils.losses.nba_loss_funtion_with_regularizer_loss(inputs, targets, self, self._loss, self.output_attention)
         if self.applying_player == False:
