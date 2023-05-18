@@ -39,30 +39,35 @@ python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight
 
 ```bash
 # BGCN no attention
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention --loss nba_mae --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --loss nba_mae --settings supervised 
 ```
 
 ```bash
 # BGCN self attention
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention self --loss nba_mae --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --output_attention self --loss nba_mae --settings supervised 
 ```
 
 ```bash
 # BGCN attention V1
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention V1 --loss nba_mae --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --output_attention V1 --loss nba_mae --settings supervised 
 ```
 
 ```bash
 # BGCN attention V2 (add diff and mul)
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention V2 --loss nba_rmse --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --output_attention V2 --loss nba_rmse --settings supervised 
 ```
 
 ```bash
 # BGCN attention V2_reverse
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention V2_reverse --loss nba_mae --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --output_attention V2_reverse --loss nba_mae --settings supervised 
 ```
 
 ```bash
 # BGCN co-attention
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --applying_attention  --output_attention co --loss nba_mae --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --output_attention co --loss nba_mae --settings supervised 
+```
+
+```bash
+# BGCN encoder
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --output_attention encoder --loss nba_mae --settings supervised 
 ```

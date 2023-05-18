@@ -63,7 +63,7 @@ def dict_to_list_name(data, output_attention):
     for data_dict in data:
         res = list()    
         for key in data_dict:
-            if output_attention in ["V2_reverse", "co"]:
+            if output_attention in ["V2_reverse", "co", "encoder_all"]:
                 if not (len(data_dict[key][3]) == 4):
                     data_dict[key][3].insert(0, data_dict[key][3][2])
                 team_1_ave = [item for sublist in data_dict[key][3] for item in sublist]
@@ -86,7 +86,7 @@ def dict_to_list_name(data, output_attention):
             all_.append(data_dict[key][0])
             all_.extend(k1)
             all_.extend(k2)
-            if output_attention in ["V2_reverse", "co"]:
+            if output_attention in ["V2_reverse", "co", "encoder_all"]:
                 all_.extend(team_1_ave)
                 all_.extend(team_2_ave)
             else:
@@ -98,7 +98,7 @@ def dict_to_list_name(data, output_attention):
             res.append(all_)
         z = list()
         z_size = 33
-        if output_attention in ["V2_reverse", "co"]:
+        if output_attention in ["V2_reverse", "co", "encoder_all"]:
             z_size = 195
         else:
             z_size = 75

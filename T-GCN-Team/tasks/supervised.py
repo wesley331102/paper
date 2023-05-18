@@ -31,10 +31,8 @@ class SupervisedForecastTask(pl.LightningModule):
         self.output_attention = output_attention
         self._loss = loss
         self.applying_attention = applying_attention
-        # encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
-        # self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
 
-        if self.output_attention in ["None", "self", "V1", "V2", "V2_reverse", "co"]:
+        if self.output_attention in ["None", "self", "V1", "V2", "V2_reverse", "co", "encoder", "encoder_all"]:
             self.lt1 = nn.Linear(5, 16)
             self.lt2 = nn.Linear(3, 16)
             self.lt3 = nn.Linear(2, 16)
@@ -42,11 +40,19 @@ class SupervisedForecastTask(pl.LightningModule):
 
         if self.applying_attention:
             encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim")*7, nhead=8)
-            self.seq_attention = nn.TransformerEncoder(encoder_layer, num_layers=1)
+            self.seq_attention = nn.TransformerEncoder(encoder_layer, num_layers=2)
 
         if self.applying_player:
             if self.output_attention in ["self", "V1", "V2"]:
                 self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
+            elif self.output_attention in ["encoder"]:
+                self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
+                encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
+                self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
+            elif self.output_attention in ["encoder_all"]:
+                self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*38
+                encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
+                self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
             elif self.output_attention == "co":
                 self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*38
             elif self.output_attention == "V2_reverse":

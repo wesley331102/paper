@@ -39,7 +39,7 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                 team_2_mean = torch.mean(inp[team_2_list_b], dim=0)
                 com = torch.zeros(0)
                 # delete
-                if output_attention in ["self", "V1", "V2", "None"]:
+                if output_attention in ["self", "V1", "V2", "None", "encoder"]:
                     team_1_ave = t[j][33:53]
                     team_2_ave = t[j][53:73]
                     ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
@@ -68,15 +68,20 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                         com1 = model.attentionLayer(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0), torch.cat((team_1_ave_inputs, diff1, mul), 0))
                         com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), torch.cat((team_2_ave_inputs, diff2, mul), 0))
                         com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
+                    elif output_attention == "encoder":
+                        com1 = torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean, team_1_ave_inputs), 0).reshape((8, model.model.hyperparameters.get("hidden_dim")))
+                        com2 = torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean, team_2_ave_inputs), 0).reshape((8, model.model.hyperparameters.get("hidden_dim")))
+                        com1 = model.transformer_encoder(com1)
+                        com2 = model.transformer_encoder(com2)
+                        com1 = com1.reshape((8, model.model.hyperparameters.get("hidden_dim")))
+                        com2 = com2.reshape((8, model.model.hyperparameters.get("hidden_dim")))
+                        com = torch.cat((com1, com2), 0)
+                        com = torch.flatten(com)
                     elif output_attention == "None":
-                        # no attention
                         com1 = torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean, team_1_ave_inputs), 0)
                         com2 = torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean, team_2_ave_inputs), 0)
                         com = torch.cat((com1, com2), 0)
-                        # com = com.reshape((16, model.model.hyperparameters.get("hidden_dim")))
-                        # com = model.transformer_encoder(com)
-                        # com = torch.flatten(com)
-                elif output_attention in ["V2_reverse", "co"]:
+                elif output_attention in ["V2_reverse", "co", "encoder_all"]:
                     team_1_ave = t[j][33:113]
                     team_2_ave = t[j][113:193]
                     ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
@@ -117,6 +122,13 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                         com1, ave1 = model.attentionLayer(com1, torch.cat((team_1_1_inputs, diff1_1, mul_1, team_1_2_inputs, diff1_2, mul_2, team_1_3_inputs, diff1_3, mul_3, team_1_ave_inputs, diff1_ave, mul_ave), 0))
                         com2, ave2 = model.attentionLayer(com2, torch.cat((team_2_1_inputs, diff2_1, mul_1, team_2_2_inputs, diff2_2, mul_2, team_2_3_inputs, diff2_3, mul_3, team_2_ave_inputs, diff2_ave, mul_ave), 0))
                         com = torch.flatten(torch.cat((com1, com2, ave1, ave2), 0))
+                    elif output_attention == "encoder_all":
+                        # output encoder_all
+                        com1 = torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean), 0)
+                        com2 = torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0)
+                        com1 = model.transformer_encoder(torch.cat((com1.reshape((7, model.model.hyperparameters.get("hidden_dim"))), team_1_1_inputs.reshape((1, model.model.hyperparameters.get("hidden_dim"))), diff1_1.reshape((1, model.model.hyperparameters.get("hidden_dim"))), mul_1.reshape((1, model.model.hyperparameters.get("hidden_dim"))), team_1_2_inputs.reshape((1, model.model.hyperparameters.get("hidden_dim"))), diff1_2.reshape((1, model.model.hyperparameters.get("hidden_dim"))), mul_2.reshape((1, model.model.hyperparameters.get("hidden_dim"))), team_1_3_inputs.reshape((1, model.model.hyperparameters.get("hidden_dim"))), diff1_3.reshape((1, model.model.hyperparameters.get("hidden_dim"))), mul_3.reshape((1, model.model.hyperparameters.get("hidden_dim"))), team_1_ave_inputs.reshape((1, model.model.hyperparameters.get("hidden_dim"))), diff1_ave.reshape((1, model.model.hyperparameters.get("hidden_dim"))), mul_ave.reshape((1, model.model.hyperparameters.get("hidden_dim")))), 0))
+                        com2 = model.transformer_encoder(torch.cat((com2.reshape((7, model.model.hyperparameters.get("hidden_dim"))), team_2_1_inputs.reshape((1, model.model.hyperparameters.get("hidden_dim"))), diff2_1.reshape((1, model.model.hyperparameters.get("hidden_dim"))), mul_1.reshape((1, model.model.hyperparameters.get("hidden_dim"))), team_2_2_inputs.reshape((1, model.model.hyperparameters.get("hidden_dim"))), diff2_2.reshape((1, model.model.hyperparameters.get("hidden_dim"))), mul_2.reshape((1, model.model.hyperparameters.get("hidden_dim"))), team_2_3_inputs.reshape((1, model.model.hyperparameters.get("hidden_dim"))), diff2_3.reshape((1, model.model.hyperparameters.get("hidden_dim"))), mul_3.reshape((1, model.model.hyperparameters.get("hidden_dim"))), team_2_ave_inputs.reshape((1, model.model.hyperparameters.get("hidden_dim"))), diff2_ave.reshape((1, model.model.hyperparameters.get("hidden_dim"))), mul_ave.reshape((1, model.model.hyperparameters.get("hidden_dim")))), 0))
+                        com = torch.flatten(torch.cat((com1, com2), 0))
                     
                 r_y = model.regressor1(com)
                 r_y = model.regressor2(r_y)
@@ -125,12 +137,12 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                 if False in torch.isnan(r_y):
                     p.append(r_y)
                     y.append(t[j][2])
-                    if output_attention in ["self", "V1", "V2", "None"]:
+                    if output_attention in ["self", "V1", "V2", "None", "encoder"]:
                         if r_y > 0:
                             o.append(t[j][73])
                         else:
                             o.append(t[j][74])
-                    elif output_attention in ["V2_reverse", "co"]:
+                    elif output_attention in ["V2_reverse", "co", "encoder_all"]:
                         if r_y > 0:
                             o.append(t[j][193])
                         else:

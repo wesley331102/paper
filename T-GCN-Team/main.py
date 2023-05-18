@@ -56,7 +56,7 @@ def main_supervised(args):
         T2T_flag = True
     else:
         feat_path = os.path.join('data', '21_22', 'new_team_list_other_n.p')
-        y_path = os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p') if args.output_attention in ["V2_reverse", "co"] else os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p')
+        y_path = os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p') if args.output_attention in ["V2_reverse", "co", "encoder_all"] else os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p')
         T2T_flag=False
 
     dm = utils.data.SpatioTemporalCSVDataModule(
