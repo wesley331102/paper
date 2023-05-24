@@ -49,6 +49,8 @@ class SupervisedForecastTask(pl.LightningModule):
                 self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
                 encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
                 self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
+                self.linear_transformation = nn.Linear(8 * self.model.hyperparameters.get("hidden_dim"), 8 * self.model.hyperparameters.get("hidden_dim"))
+                self.tanh = nn.Tanh()
             elif self.output_attention in ["encoder_all"]:
                 self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*38
                 encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
@@ -85,6 +87,10 @@ class SupervisedForecastTask(pl.LightningModule):
                 1,
             )
         else:
+            # encoder
+            encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
+            self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
+            
             self.regressor1 = nn.Linear(
                 self.model.hyperparameters.get("hidden_dim")*4,
                 64,

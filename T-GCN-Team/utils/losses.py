@@ -69,10 +69,16 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                         com2 = model.attentionLayer(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean), 0), torch.cat((team_2_ave_inputs, diff2, mul), 0))
                         com = torch.cat((com1, com2, team_1_ave_inputs, team_2_ave_inputs), 0)
                     elif output_attention == "encoder":
-                        com1 = torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean, team_1_ave_inputs), 0).reshape((8, model.model.hyperparameters.get("hidden_dim")))
-                        com2 = torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean, team_2_ave_inputs), 0).reshape((8, model.model.hyperparameters.get("hidden_dim")))
-                        com1 = model.transformer_encoder(com1)
-                        com2 = model.transformer_encoder(com2)
+                        # com1 = model.linear_transformation(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean, team_1_ave_inputs), 0))
+                        # com1 = model.tanh(com1)
+                        # com1 = com1.reshape((8, model.model.hyperparameters.get("hidden_dim")))
+                        # com2 = model.linear_transformation(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean, team_2_ave_inputs), 0))
+                        # com2 = model.tanh(com2)
+                        # com2 = com2.reshape((8, model.model.hyperparameters.get("hidden_dim")))
+                        # com1 = model.transformer_encoder(com1)
+                        # com2 = model.transformer_encoder(com2)
+                        com1 = model.transformer_encoder(torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean, team_1_ave_inputs), 0).reshape((8, model.model.hyperparameters.get("hidden_dim"))))
+                        com2 = model.transformer_encoder(torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean, team_2_ave_inputs), 0).reshape((8, model.model.hyperparameters.get("hidden_dim"))))
                         com1 = com1.reshape((8, model.model.hyperparameters.get("hidden_dim")))
                         com2 = com2.reshape((8, model.model.hyperparameters.get("hidden_dim")))
                         com = torch.cat((com1, com2), 0)
@@ -185,8 +191,15 @@ def nba_loss_funtion_with_regularizer_loss_only_team(inputs, targets, model, los
                 ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
                 team_1_ave_inputs = team_1_ave @ aw + ab
                 team_2_ave_inputs = team_2_ave @ aw + ab
-                com1 = torch.cat((inp[int(t[j][0])], team_1_ave_inputs), 0)
-                com2 = torch.cat((inp[int(t[j][1])], team_2_ave_inputs), 0)
+                # no enoder
+                # com1 = torch.cat((inp[int(t[j][0])], team_1_ave_inputs), 0)
+                # com2 = torch.cat((inp[int(t[j][1])], team_2_ave_inputs), 0)
+                # enoder
+                com1 = model.transformer_encoder(torch.cat((inp[int(t[j][0])], team_1_ave_inputs), 0).reshape((2, model.model.hyperparameters.get("hidden_dim"))))
+                com2 = model.transformer_encoder(torch.cat((inp[int(t[j][1])], team_2_ave_inputs), 0).reshape((2, model.model.hyperparameters.get("hidden_dim"))))
+                com1 = com1.reshape((2, model.model.hyperparameters.get("hidden_dim")))
+                com2 = com2.reshape((2, model.model.hyperparameters.get("hidden_dim")))
+                
                 com = torch.cat((com1, com2), 0)
                 r_y = model.regressor1(com)
                 r_y = model.regressor2(r_y)
