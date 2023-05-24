@@ -14,6 +14,7 @@ class SupervisedForecastTask(pl.LightningModule):
         attentionLayer: nn.Module,
         loss: str="nba_mae",
         applying_attention: bool = False,
+        applying_team: bool = False,
         applying_player: bool = False,
         t_dim: int = 0,
         p_dim: int = 0,
@@ -27,6 +28,7 @@ class SupervisedForecastTask(pl.LightningModule):
         self.model = model
         self.model_name = model_name
         self.attentionLayer = attentionLayer
+        self.applying_team = applying_team
         self.applying_player = applying_player
         self.output_attention = output_attention
         self._loss = loss
@@ -49,8 +51,8 @@ class SupervisedForecastTask(pl.LightningModule):
                 self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
                 encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
                 self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
-                self.linear_transformation = nn.Linear(8 * self.model.hyperparameters.get("hidden_dim"), 8 * self.model.hyperparameters.get("hidden_dim"))
-                self.tanh = nn.Tanh()
+                # self.linear_transformation = nn.Linear(8 * self.model.hyperparameters.get("hidden_dim"), 8 * self.model.hyperparameters.get("hidden_dim"))
+                # self.tanh = nn.Tanh()
             elif self.output_attention in ["encoder_all"]:
                 self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*38
                 encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
@@ -59,6 +61,10 @@ class SupervisedForecastTask(pl.LightningModule):
                 self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*38
             elif self.output_attention == "V2_reverse":
                 self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*24
+            elif self.applying_team == False:
+                encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
+                self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
+                self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*14
             else:
                 self.MLP_input_dim = self.model.hyperparameters.get("hidden_dim")*16
             self.regressor1 = nn.Linear(
@@ -90,7 +96,7 @@ class SupervisedForecastTask(pl.LightningModule):
             # encoder
             encoder_layer = nn.TransformerEncoderLayer(d_model=self.model.hyperparameters.get("hidden_dim"), nhead=8)
             self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=1)
-            
+
             self.regressor1 = nn.Linear(
                 self.model.hyperparameters.get("hidden_dim")*4,
                 64,
@@ -131,10 +137,12 @@ class SupervisedForecastTask(pl.LightningModule):
             return utils.losses.nba_loss_funtion_with_regularizer_loss_T2T(inputs, targets, self)  
         if self.applying_attention:
             return utils.losses.nba_loss_funtion_with_regularizer_loss_with_seq(inputs, targets, self, self._loss)
-        if self.applying_player:
-            return utils.losses.nba_loss_funtion_with_regularizer_loss(inputs, targets, self, self._loss, self.output_attention)
+        if self.applying_team == False:
+            return utils.losses.nba_loss_funtion_with_regularizer_loss_only_player(inputs, targets, self, self._loss)
         if self.applying_player == False:
             return utils.losses.nba_loss_funtion_with_regularizer_loss_only_team(inputs, targets, self, self._loss)
+        if self.applying_team and self.applying_player:
+            return utils.losses.nba_loss_funtion_with_regularizer_loss(inputs, targets, self, self._loss, self.output_attention)
         raise NameError("Loss not supported:", self._loss)
 
     def training_step(self, batch, batch_idx):

@@ -13,8 +13,10 @@
 ## Model Training
 
 ```bash
+====================================================================================================
 # Basketball T2T
 python main.py --model_name T2TGRU --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --hidden_dim 64 --loss nba_T2T --settings supervised
+====================================================================================================
 ```
 
 ```bash
@@ -28,18 +30,24 @@ python main.py --model_name GRU --max_epochs 200 --learning_rate 0.001 --weight_
 ```
 
 ```bash
+====================================================================================================
 # BGCN no player
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --loss nba_mae --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_team --loss nba_mae --settings supervised 
+====================================================================================================
 ```
 
 ```bash
-# BGCN no simplified attention
+====================================================================================================
+# BGCN no team
 python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --loss nba_mae --settings supervised 
+====================================================================================================
 ```
 
 ```bash
+====================================================================================================
 # BGCN no attention
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --loss nba_mae --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_team --applying_player --loss nba_mae --settings supervised 
+====================================================================================================
 ```
 
 ```bash
@@ -68,6 +76,8 @@ python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight
 ```
 
 ```bash
+====================================================================================================
 # BGCN encoder
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_player --output_attention encoder --loss nba_mae --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_team --applying_player --output_attention encoder --loss nba_mae --settings supervised 
+====================================================================================================
 ```

@@ -160,6 +160,7 @@ class GRU(nn.Module):
         parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
         parser.add_argument("--hidden_dim", type=int, default=64)
         parser.add_argument("--applying_player", action="store_true")
+        parser.add_argument("--applying_team", action="store_true")
         return parser
 
     @property

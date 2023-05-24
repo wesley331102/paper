@@ -197,13 +197,92 @@ def nba_loss_funtion_with_regularizer_loss_only_team(inputs, targets, model, los
                 # enoder
                 com1 = model.transformer_encoder(torch.cat((inp[int(t[j][0])], team_1_ave_inputs), 0).reshape((2, model.model.hyperparameters.get("hidden_dim"))))
                 com2 = model.transformer_encoder(torch.cat((inp[int(t[j][1])], team_2_ave_inputs), 0).reshape((2, model.model.hyperparameters.get("hidden_dim"))))
-                com1 = com1.reshape((2, model.model.hyperparameters.get("hidden_dim")))
-                com2 = com2.reshape((2, model.model.hyperparameters.get("hidden_dim")))
+                com1 = com1.reshape((2 * model.model.hyperparameters.get("hidden_dim")))
+                com2 = com2.reshape((2 * model.model.hyperparameters.get("hidden_dim")))
                 
                 com = torch.cat((com1, com2), 0)
                 r_y = model.regressor1(com)
                 r_y = model.regressor2(r_y)
                 r_y = model.regressor3(r_y)
+                if False in torch.isnan(r_y):
+                    p.append(r_y)
+                    y.append(t[j][2])
+                    if r_y > 0:
+                        o.append(t[j][73])
+                    else:
+                        o.append(t[j][74])
+                    if loss_type == "nba_mae":
+                        loss += torch.sqrt((r_y - t[j][2]) ** 2)
+                    elif loss_type == "nba_rmse":
+                        loss += ((r_y - t[j][2]) ** 2)
+                    game += 1
+
+    loss = loss / game
+    if loss_type == "nba_rmse":
+        loss = torch.sqrt(loss)
+
+    reg_loss = 0.0
+    for param in model.parameters():
+        reg_loss += torch.sum(param ** 2) / 2
+    reg_loss = lamda * reg_loss
+
+    return loss + reg_loss, p, y, o
+
+def nba_loss_funtion_with_regularizer_loss_only_player(inputs, targets, model, loss_type:str="nba_mae", lamda=1.5e-3):
+    assert inputs.shape[0] == targets.shape[0]
+    leng = inputs.shape[0]
+    game = 0.0
+    loss = 0.0
+    p, y, o = list(), list(), list()
+    for i in range(leng):
+        inp = inputs[i]
+        t = torch.reshape(targets[i], (targets[i].shape[1], targets[i].shape[2]))
+        for j in range(t.shape[0]):
+            if t[j][0] != 0 or t[j][1] != 0:
+                team_1_list = t[j][3:18]
+                team_2_list = t[j][18:33]
+                team_1_list = [ elem for elem in team_1_list if elem != -1]
+                team_2_list = [ elem for elem in team_2_list if elem != -1]
+                team_1_list = [ int(i) for i in team_1_list]
+                team_2_list = [ int(i) for i in team_2_list]
+                if len(team_1_list) < 7 or len(team_2_list) < 7:
+                    continue
+                team_1_list_st = team_1_list[:5]
+                team_1_list_b = team_1_list[5:]
+                team_2_list_st = team_2_list[:5]
+                team_2_list_b = team_2_list[5:]
+                st11 = inp[team_1_list_st[0]]
+                st12 = inp[team_1_list_st[1]]
+                st13 = inp[team_1_list_st[2]]
+                st14 = inp[team_1_list_st[3]]
+                st15 = inp[team_1_list_st[4]]
+                st21 = inp[team_2_list_st[0]]
+                st22 = inp[team_2_list_st[1]]
+                st23 = inp[team_2_list_st[2]]
+                st24 = inp[team_2_list_st[3]]
+                st25 = inp[team_2_list_st[4]]
+                team_1_mean = torch.mean(inp[team_1_list_b], dim=0)
+                team_2_mean = torch.mean(inp[team_2_list_b], dim=0)
+                team_1_ave = t[j][33:53]
+                team_2_ave = t[j][53:73]
+                ow = model.mask_aspect(20, model.lt1.weight, [2, 5, 8, 9, 12], 16)
+                ew = model.mask_aspect(20, model.lt2.weight, [10, 14, 15], 16)
+                dw = model.mask_aspect(20, model.lt3.weight, [13, 17], 16)
+                iw = model.mask_aspect(20, model.lt4.weight, [19], 16)
+                aw = torch.cat((ow, ew, dw, iw), dim=1)
+                ab = torch.cat((model.lt1.bias, model.lt2.bias, model.lt3.bias, model.lt4.bias), dim=0)
+                team_1_ave_inputs = team_1_ave @ aw + ab
+                team_2_ave_inputs = team_2_ave @ aw + ab
+                com1 = model.transformer_encoder(torch.cat((st11, st12, st13, st14, st15, team_1_mean, team_1_ave_inputs), 0).reshape((7, model.model.hyperparameters.get("hidden_dim"))))
+                com2 = model.transformer_encoder(torch.cat((st21, st22, st23, st24, st25, team_2_mean, team_2_ave_inputs), 0).reshape((7, model.model.hyperparameters.get("hidden_dim"))))
+                com1 = com1.reshape((7, model.model.hyperparameters.get("hidden_dim")))
+                com2 = com2.reshape((7, model.model.hyperparameters.get("hidden_dim")))
+                com = torch.cat((com1, com2), 0)
+                com = torch.flatten(com)
+                r_y = model.regressor1(com)
+                r_y = model.regressor2(r_y)
+                r_y = model.regressor3(r_y)
+                r_y = model.regressor4(r_y)
                 if False in torch.isnan(r_y):
                     p.append(r_y)
                     y.append(t[j][2])
