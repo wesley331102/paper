@@ -45,8 +45,15 @@ python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight
 
 ```bash
 ====================================================================================================
-# BGCN no attention
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_team --applying_player --loss nba_mae --settings supervised 
+# BGCN no co-attention
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_team --applying_player --output_attention encoder --loss nba_mae --settings supervised 
+====================================================================================================
+```
+
+```bash
+====================================================================================================
+# BGCN no encoder
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_team --applying_player --applying_co_attention --loss nba_mae --settings supervised 
 ====================================================================================================
 ```
 
@@ -78,6 +85,6 @@ python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight
 ```bash
 ====================================================================================================
 # BGCN encoder
-python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_team --applying_player --output_attention encoder --loss nba_mae --settings supervised 
+python main.py --model_name BGCN --max_epochs 200 --learning_rate 0.001 --weight_decay 0 --batch_size 32 --aspect_num 4 --hidden_dim 64 --co_attention_dim 16 --applying_team --applying_player --applying_co_attention --output_attention encoder --loss nba_mae --settings supervised 
 ====================================================================================================
 ```
