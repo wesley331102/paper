@@ -32,6 +32,7 @@ class SupervisedForecastTask(pl.LightningModule):
         self.applying_player = applying_player
         self.output_attention = output_attention
         self._loss = loss
+        self.heatmap_count = 0
         self.applying_attention = applying_attention
 
         if self.output_attention in ["None", "self", "V1", "V2", "V2_reverse", "co", "encoder", "encoder_all"]:
