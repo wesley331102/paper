@@ -33,7 +33,7 @@ def get_mean(m, y):
     
     return (s / num), (s / num) ** 0.5
 
-def nba_metrics(p, y, o):
+def nba_metrics(p, y, o, threshold=False):
     assert len(p) == len(y) and len(p) == len(o)
     rmse_loss = 0.0
     mae_loss = 0.0
@@ -52,5 +52,22 @@ def nba_metrics(p, y, o):
     mae_loss = mae_loss / game
     acc = acc / game
     gain = gain / game
+
+    if threshold:
+        for t in range(5):
+            print("==========threshold: {}==========".format(str(t+1)))
+            acc_th = 0.0
+            gain_th = 0.0
+            game_th = 0.0
+            for i in range(len(p)):
+                if abs(p[i]) > t+1:
+                    if p[i]*y[i] > 0:
+                        acc_th += 1
+                        gain_th += o[i]
+                    game_th += 1
+            acc_th = acc_th / game_th if game_th > 0 else 0
+            gain_th = gain_th / game_th if game_th > 0 else 0
+            print("==========acc: {}==========".format(str(acc_th)))
+            print("==========gain: {}==========".format(str(gain_th)))
 
     return rmse_loss, mae_loss, acc, gain
