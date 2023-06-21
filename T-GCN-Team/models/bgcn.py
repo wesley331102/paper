@@ -314,6 +314,8 @@ class BGCNCell(nn.Module):
             self.co_attention = ParallelCoAttentionLayer(
                 self._hidden_dim, self._aspect_num, self._co_attention_dim
             )
+            # counter for visualization
+            self.counter = 0
     
     def mask_graph(self):
         team_graph_dict = dict()
@@ -396,7 +398,17 @@ class BGCNCell(nn.Module):
                 for i in range(batch_dim_t):
                     team_list = self._team_2_player[seq_list[i]].keys()
                     for team in team_list:
+                        # team_num = 11
+                        # player_num = 323
+                        # if team == team_num and player_num in self._team_2_player[seq_list[i]][team]:
+                        #     torch.save(co_attention_hidden_state_t[i, team, :], 'output_co/{}_before_team.pt'.format(str(self.counter)))
+                        #     torch.save(co_attention_hidden_state_p[i, player_num, :], 'output_co/{}_before_player.pt'.format(str(self.counter)))
                         co_attention_hidden_state_t[i, team, :], co_attention_hidden_state_p[i, self._team_2_player[seq_list[i]][team], :] = self.co_attention(co_attention_hidden_state_t[i, team, :], co_attention_hidden_state_p[i, self._team_2_player[seq_list[i]][team], :])            
+                        # if team == team_num and player_num in self._team_2_player[seq_list[i]][team]:
+                        #     torch.save(co_attention_hidden_state_t[i, team, :], 'output_co/{}_after_team.pt'.format(str(self.counter)))
+                        #     torch.save(co_attention_hidden_state_p[i, player_num, :], 'output_co/{}_after_player.pt'.format(str(self.counter)))
+                        #     self.counter += 1
+                
                 # batch size * (num of team nodes * hidden state dimension)
                 co_attention_hidden_state_t = co_attention_hidden_state_t.reshape((batch_dim_p, self._input_dim_t * self._hidden_dim))
                 # batch size * (num of player nodes * hidden state dimension)

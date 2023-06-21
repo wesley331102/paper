@@ -155,7 +155,7 @@ class SupervisedForecastTask(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         predictions, y = self.shared_step(batch, batch_idx)
         loss, p, real_y, odds = self.loss(predictions, y)
-        rmse, mae, accr, gain = utils.metrics.nba_metrics(p, real_y, odds, True)
+        rmse, mae, accr, gain = utils.metrics.nba_metrics(p, real_y, odds, False)
         metrics = {
             "val_loss_mse": loss,
             "rmse": rmse,

@@ -79,14 +79,14 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                         # com2 = model.transformer_encoder(com2)
                         com1 = torch.cat((inp[int(t[j][0])], st11, st12, st13, st14, st15, team_1_mean, team_1_ave_inputs), 0).reshape((8, model.model.hyperparameters.get("hidden_dim")))
                         com2 = torch.cat((inp[int(t[j][1])], st21, st22, st23, st24, st25, team_2_mean, team_2_ave_inputs), 0).reshape((8, model.model.hyperparameters.get("hidden_dim")))
-                        team_num = 0
-                        if int(t[j][0]) == team_num:
-                            torch.save(com1, 'output/{}_before.pt'.format(str(model.heatmap_count)))
+                        # team_num = 0
+                        # if int(t[j][0]) == team_num:
+                        #     torch.save(com1, 'output/{}_before.pt'.format(str(model.heatmap_count)))
                         com1 = model.transformer_encoder(com1)
-                        com2 = model.transformer_encoder(com2)
-                        if int(t[j][0]) == team_num:
-                            torch.save(com1, 'output/{}_after.pt'.format(str(model.heatmap_count)))
-                            model.heatmap_count += 1
+                        # com2 = model.transformer_encoder(com2)
+                        # if int(t[j][0]) == team_num:
+                        #     torch.save(com1, 'output/{}_after.pt'.format(str(model.heatmap_count)))
+                        #     model.heatmap_count += 1
                         com1 = com1.reshape((8, model.model.hyperparameters.get("hidden_dim")))
                         com2 = com2.reshape((8, model.model.hyperparameters.get("hidden_dim")))
                         com = torch.cat((com1, com2), 0)
