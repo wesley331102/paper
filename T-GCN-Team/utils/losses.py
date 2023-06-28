@@ -152,24 +152,36 @@ def nba_loss_funtion_with_regularizer_loss(inputs, targets, model, loss_type:str
                     p.append(r_y)
                     y.append(t[j][2])
                     if output_attention in ["self", "V1", "V2", "None", "encoder"]:
-                        if r_y > 0:
+                        if r_y > 0 and (False in torch.isnan(t[j][73]) and False in torch.isnan(t[j][74])):
                             o.append(t[j][73])
-                        else:
+                        elif False in torch.isnan(t[j][73]) and False in torch.isnan(t[j][74]):
                             o.append(t[j][74])
                     elif output_attention in ["V2_reverse", "co", "encoder_all"]:
-                        if r_y > 0:
+                        if r_y > 0 and (False in torch.isnan(t[j][193]) and False in torch.isnan(t[j][194])):
                             o.append(t[j][193])
-                        else:
+                        elif False in torch.isnan(t[j][193]) and False in torch.isnan(t[j][194]):
                             o.append(t[j][194])
                     if loss_type == "nba_mae":
                         loss += torch.sqrt((r_y - t[j][2]) ** 2)
                     elif loss_type == "nba_rmse":
                         loss += ((r_y - t[j][2]) ** 2)
+                    elif loss_type == "nba_gain":
+                        if r_y*t[j][2] > 0:
+                            if r_y > 0 and (False in torch.isnan(t[j][73]) and False in torch.isnan(t[j][74])):
+                                loss += (t[j][73])
+                            elif False in torch.isnan(t[j][73]) and False in torch.isnan(t[j][74]):
+                                loss += (t[j][74])
+                            
                     game += 1
 
     loss = loss / game
+
+
     if loss_type == "nba_rmse":
         loss = torch.sqrt(loss)
+    if loss_type == "nba_gain":
+        sig = torch.nn.Sigmoid()
+        loss = (1-sig(loss))*1000
 
     reg_loss = 0.0
     for param in model.parameters():
