@@ -56,40 +56,40 @@ def main_supervised(args):
         T2T_flag = True
     else:
         # 21-22
-        # feat_path = os.path.join('data', '21_22', 'new_team_list_other_n.p')
-        # y_path = os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p') if args.output_attention in ["V2_reverse", "co", "encoder_all"] else os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p')
+        feat_path = os.path.join('data', '21_22', 'new_team_list_other_n.p')
+        y_path = os.path.join('data', '21_22', 'team_list_y_namenum_non_ave_odds.p') if args.output_attention in ["V2_reverse", "co", "encoder_all"] else os.path.join('data', '21_22', 'team_list_y_namenum_ave_odds.p')
         # 22-23
-        feat_path = os.path.join('data', '22_23', 'new_team_list_other_n.p')
-        y_path = os.path.join('data', '22_23', 'team_list_y_namenum_non_ave_odds.p') if args.output_attention in ["V2_reverse", "co", "encoder_all"] else os.path.join('data', '22_23', 'team_list_y_namenum_ave_odds.p')
+        # feat_path = os.path.join('data', '22_23', 'new_team_list_other_n.p')
+        # y_path = os.path.join('data', '22_23', 'team_list_y_namenum_non_ave_odds.p') if args.output_attention in ["V2_reverse", "co", "encoder_all"] else os.path.join('data', '22_23', 'team_list_y_namenum_ave_odds.p')
         T2T_flag=False
 
     dm = utils.data.SpatioTemporalCSVDataModule(
         feat_path=feat_path, 
         # 21-22
-        # p_feat_path=os.path.join('data', '21_22', 'new_player_list_other_n.p'),
-        # player_team_path=os.path.join('data', '21_22', 'member_schedule.p'),
+        p_feat_path=os.path.join('data', '21_22', 'new_player_list_other_n.p'),
+        player_team_path=os.path.join('data', '21_22', 'member_schedule.p'),
         # 22-23
-        p_feat_path=os.path.join('data', '22_23', 'new_player_list_other_n.p'),
-        player_team_path=os.path.join('data', '22_23', 'member_schedule.p'),
+        # p_feat_path=os.path.join('data', '22_23', 'new_player_list_other_n.p'),
+        # player_team_path=os.path.join('data', '22_23', 'member_schedule.p'),
         # all
         y_path=y_path,
         T2T=T2T_flag,
         feat_path_test = os.path.join('data', 'T2T', 'x_feat.p'),
         y_path_test = os.path.join('data', 'T2T', 'y_feat_odds.p'),
         # 21-22
-        # adj_path=os.path.join('data', '21_22', 'team_adj.csv'), 
-        # adj_1_path=os.path.join('data', '21_22', 'pass_adj.csv'),
-        # adj_2_path=os.path.join('data', '21_22', 'ast_adj.csv'),
-        # adj_3_path=os.path.join('data', '21_22', 'def_adj.csv'),
-        # adj_4_path=os.path.join('data', '21_22', 'blk_adj.csv'),
-        # adj_5_path=os.path.join('data', '21_22', 'pf_adj.csv'),
+        adj_path=os.path.join('data', '21_22', 'team_adj.csv'), 
+        adj_1_path=os.path.join('data', '21_22', 'pass_adj.csv'),
+        adj_2_path=os.path.join('data', '21_22', 'ast_adj.csv'),
+        adj_3_path=os.path.join('data', '21_22', 'def_adj.csv'),
+        adj_4_path=os.path.join('data', '21_22', 'blk_adj.csv'),
+        adj_5_path=os.path.join('data', '21_22', 'pf_adj.csv'),
         # 22-23
-        adj_path=os.path.join('data', '22_23', 'team_adj.csv'), 
-        adj_1_path=os.path.join('data', '22_23', 'pass_adj.csv'),
-        adj_2_path=os.path.join('data', '22_23', 'ast_adj.csv'),
-        adj_3_path=os.path.join('data', '22_23', 'def_adj.csv'),
-        adj_4_path=os.path.join('data', '22_23', 'blk_adj.csv'),
-        adj_5_path=os.path.join('data', '22_23', 'pf_adj.csv'),
+        # adj_path=os.path.join('data', '22_23', 'team_adj.csv'), 
+        # adj_1_path=os.path.join('data', '22_23', 'pass_adj.csv'),
+        # adj_2_path=os.path.join('data', '22_23', 'ast_adj.csv'),
+        # adj_3_path=os.path.join('data', '22_23', 'def_adj.csv'),
+        # adj_4_path=os.path.join('data', '22_23', 'blk_adj.csv'),
+        # adj_5_path=os.path.join('data', '22_23', 'pf_adj.csv'),
         **vars(args)
     )
     model = get_model(args, dm)
