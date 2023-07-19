@@ -398,16 +398,16 @@ class BGCNCell(nn.Module):
                 for i in range(batch_dim_t):
                     team_list = self._team_2_player[seq_list[i]].keys()
                     for team in team_list:
-                        team_num = 11
-                        player_num = 323
-                        if team == team_num and player_num in self._team_2_player[seq_list[i]][team]:
-                            torch.save(co_attention_hidden_state_t[i, team, :], 'output_co/{}_before_team.pt'.format(str(self.counter)))
-                            torch.save(co_attention_hidden_state_p[i, player_num, :], 'output_co/{}_before_player.pt'.format(str(self.counter)))
+                        # team_num = 11
+                        # player_num = 323
+                        # if team == team_num and player_num in self._team_2_player[seq_list[i]][team]:
+                        #     torch.save(co_attention_hidden_state_t[i, team, :], 'output_co/{}_before_team.pt'.format(str(self.counter)))
+                        #     torch.save(co_attention_hidden_state_p[i, player_num, :], 'output_co/{}_before_player.pt'.format(str(self.counter)))
                         co_attention_hidden_state_t[i, team, :], co_attention_hidden_state_p[i, self._team_2_player[seq_list[i]][team], :] = self.co_attention(co_attention_hidden_state_t[i, team, :], co_attention_hidden_state_p[i, self._team_2_player[seq_list[i]][team], :])            
-                        if team == team_num and player_num in self._team_2_player[seq_list[i]][team]:
-                            torch.save(co_attention_hidden_state_t[i, team, :], 'output_co/{}_after_team.pt'.format(str(self.counter)))
-                            torch.save(co_attention_hidden_state_p[i, player_num, :], 'output_co/{}_after_player.pt'.format(str(self.counter)))
-                            self.counter += 1
+                        # if team == team_num and player_num in self._team_2_player[seq_list[i]][team]:
+                        #     torch.save(co_attention_hidden_state_t[i, team, :], 'output_co/{}_after_team.pt'.format(str(self.counter)))
+                        #     torch.save(co_attention_hidden_state_p[i, player_num, :], 'output_co/{}_after_player.pt'.format(str(self.counter)))
+                        #     self.counter += 1
                 
                 # batch size * (num of team nodes * hidden state dimension)
                 co_attention_hidden_state_t = co_attention_hidden_state_t.reshape((batch_dim_p, self._input_dim_t * self._hidden_dim))
@@ -760,7 +760,9 @@ class BGCN(nn.Module):
         self.linear_transformation_defend = nn.Linear(3, self._aspect_dim)
         self.linear_transformation_error = nn.Linear(2, self._aspect_dim)
         self.linear_transformation_influence = nn.Linear(4, self._aspect_dim)
-        self._feature_dim = self._aspect_dim * 4
+        # modify
+        # self._feature_dim = self._aspect_dim * 4
+        self._feature_dim = self._aspect_dim * 3
 
         # BGCN cell
         self.tgcn_cell = BGCNCell(self.adj, self.adj_1, self.adj_2, self.adj_3, self.adj_4, self.adj_5, self._team_2_player, self._input_dim_t, self._input_dim_p, self._aspect_num, self._feature_dim, self._hidden_dim, self._co_attention_dim, self._applying_team, self._applying_player, self._applying_co_attention)
@@ -821,9 +823,13 @@ class BGCN(nn.Module):
         error_weight = self.mask_aspect(feature_dim, self.linear_transformation_error.weight, [13, 17])
         influence_weight = self.mask_aspect(feature_dim, self.linear_transformation_influence.weight, [19, 20, 21, 22])
         # origin feature dimension * feature dimension
-        aspect_weight = torch.cat((offense_weight, defend_weight, error_weight, influence_weight), dim=1)
+        # modify
+        # aspect_weight = torch.cat((offense_weight, defend_weight, error_weight, influence_weight), dim=1)
+        aspect_weight = torch.cat((defend_weight, error_weight, influence_weight), dim=1)
         # feature dimension
+        # modify
         aspect_bias = torch.cat((self.linear_transformation_offense.bias, self.linear_transformation_defend.bias, self.linear_transformation_error.bias, self.linear_transformation_influence.bias), dim=0)
+        aspect_bias = torch.cat((self.linear_transformation_defend.bias, self.linear_transformation_error.bias, self.linear_transformation_influence.bias), dim=0)
         # batch size * seq length * num of nodes * feature dimension
         new_inputs = inputs @ aspect_weight + aspect_bias
 
